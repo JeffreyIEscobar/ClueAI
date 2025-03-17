@@ -34,7 +34,7 @@ const listGames = async (req, res) => {
  */
 const createGame = async (req, res) => {
   try {
-    const { name, maxPlayers, private, password } = req.body;
+    const { name, maxPlayers, isPrivate, password } = req.body;
     const userId = req.user.userId;
     
     // Validate input
@@ -49,7 +49,7 @@ const createGame = async (req, res) => {
     const game = await gameService.createGame({
       name,
       maxPlayers: maxPlayers || 6,
-      private: private || false,
+      private: isPrivate || false,
       password,
       createdBy: userId
     });

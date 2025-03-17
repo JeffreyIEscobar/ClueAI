@@ -16,6 +16,10 @@ const JWT_SECRET = process.env.JWT_SECRET || 'clue-less-secret-key';
  */
 const generateToken = (user) => {
   try {
+    if (!user || !user.id || !user.username) {
+      throw new Error('Invalid user object');
+    }
+
     const payload = {
       userId: user.id,
       username: user.username
@@ -28,7 +32,7 @@ const generateToken = (user) => {
     return jwt.sign(payload, JWT_SECRET, options);
   } catch (error) {
     logger.error('Error generating token:', error);
-    throw error;
+    return undefined;
   }
 };
 
