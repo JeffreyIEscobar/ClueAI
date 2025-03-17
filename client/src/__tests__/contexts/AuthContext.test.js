@@ -3,20 +3,28 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-
 import { AuthProvider, useAuth } from '../../contexts/AuthContext';
 
-// 1) Mock the navigate function from react-router-dom
+// Mock the navigate function from react-router-dom
 const mockNavigate = jest.fn();
 jest.mock('react-router-dom', () => ({
-  // Keep other exports from react-router-dom
   ...jest.requireActual('react-router-dom'),
   useNavigate: () => mockNavigate,
 }));
 
-// 2) A simple test component to demonstrate usage of AuthContext
+// Mock the api module
+jest.mock('../../utils/api', () => ({
+  post: jest.fn(),
+  defaults: {
+    headers: {
+      common: {}
+    }
+  }
+}));
+
+// A test component that exposes auth functionality
 const TestComponent = () => {
-  const { currentUser, token, loading, logout } = useAuth();
+  const { currentUser, token, loading, register, login, logout } = useAuth();
 
   return (
     <div>
@@ -29,78 +37,246 @@ const TestComponent = () => {
       <button onClick={logout} data-testid="logout-btn">
         Logout
       </button>
+
+      <button 
+        onClick={() => register('newuser', 'new@user.com', 'password')} 
+        data-testid="register-btn"
+      >
+        Register
+      </button>
+
+      <button 
+        onClick={() => login('testuser', 'password')} 
+        data-testid="login-btn"
+      >
+        Login
+      </button>
     </div>
   );
 };
 
-describe('AuthContext (without api)', () => {
+describe('AuthContext', () => {
+  const api = require('../../utils/api');
+  
   beforeEach(() => {
-    // Clear mocks and localStorage before each test
     jest.clearAllMocks();
     localStorage.clear();
   });
 
-  test('loads user from localStorage on mount', async () => {
-    // Arrange: Put a user/token in localStorage
-    localStorage.setItem('user', JSON.stringify({ id: '1', username: 'storedUser' }));
-    localStorage.setItem('token', 'stored-token');
+  describe('Initial Load', () => {
+    test('starts with loading=true and no user', () => {
+      render(
+        <MemoryRouter>
+          <AuthProvider>
+            <TestComponent />
+          </AuthProvider>
+        </MemoryRouter>
+      );
 
-    // Act: Render with MemoryRouter + AuthProvider
-    render(
-      <MemoryRouter>
-        <AuthProvider>
-          <TestComponent />
-        </AuthProvider>
-      </MemoryRouter>
-    );
-
-    // Initially, loading is true
-    expect(screen.getByTestId('loading').textContent).toBe('true');
-
-    // Wait for the effect to finish
-    await waitFor(() => {
-      expect(screen.getByTestId('loading').textContent).toBe('false');
+      expect(screen.getByTestId('loading').textContent).toBe('true');
+      expect(screen.getByTestId('user').textContent).toBe('null');
+      expect(screen.getByTestId('token').textContent).toBe('no-token');
     });
 
-    // Assert: The user and token were loaded from localStorage
-    expect(screen.getByTestId('user').textContent).toBe('storedUser');
-    expect(screen.getByTestId('token').textContent).toBe('stored-token');
+    test('loads user from localStorage on mount', async () => {
+      localStorage.setItem('user', JSON.stringify({ id: '1', username: 'storedUser' }));
+      localStorage.setItem('token', 'stored-token');
+
+      render(
+        <MemoryRouter>
+          <AuthProvider>
+            <TestComponent />
+          </AuthProvider>
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('loading').textContent).toBe('false');
+      });
+
+      expect(screen.getByTestId('user').textContent).toBe('storedUser');
+      expect(screen.getByTestId('token').textContent).toBe('stored-token');
+    });
   });
 
-  test('logout removes user/token from localStorage and navigates', async () => {
-    // Arrange: Put user/token in localStorage so we start "logged in"
-    localStorage.setItem('user', JSON.stringify({ id: '99', username: 'LocalUser' }));
-    localStorage.setItem('token', 'local-token');
+  describe('Registration', () => {
+    test('successful registration returns success response', async () => {
+      api.post.mockResolvedValueOnce({
+        data: { userId: '123', username: 'newuser' }
+      });
 
-    // Act: Render and wait for loading to finish
-    render(
-      <MemoryRouter>
-        <AuthProvider>
-          <TestComponent />
-        </AuthProvider>
-      </MemoryRouter>
-    );
+      render(
+        <MemoryRouter>
+          <AuthProvider>
+            <TestComponent />
+          </AuthProvider>
+        </MemoryRouter>
+      );
 
-    // Wait for loading to become false
-    await waitFor(() => {
-      expect(screen.getByTestId('loading').textContent).toBe('false');
+      await waitFor(() => {
+        expect(screen.getByTestId('loading').textContent).toBe('false');
+      });
+
+      await userEvent.click(screen.getByTestId('register-btn'));
+
+      expect(api.post).toHaveBeenCalledWith('/auth/register', {
+        username: 'newuser',
+        email: 'new@user.com',
+        password: 'password'
+      });
     });
 
-    // Confirm user is currently "LocalUser"
-    expect(screen.getByTestId('user').textContent).toBe('LocalUser');
+    test('failed registration returns error', async () => {
+      api.post.mockRejectedValueOnce({
+        response: { data: { message: 'Username taken' } }
+      });
 
-    // Click Logout
-    await userEvent.click(screen.getByTestId('logout-btn'));
+      render(
+        <MemoryRouter>
+          <AuthProvider>
+            <TestComponent />
+          </AuthProvider>
+        </MemoryRouter>
+      );
 
-    // Assert localStorage is cleared
-    expect(localStorage.getItem('user')).toBeNull();
-    expect(localStorage.getItem('token')).toBeNull();
+      await waitFor(() => {
+        expect(screen.getByTestId('loading').textContent).toBe('false');
+      });
 
-    // The context state should now show no user/token
-    expect(screen.getByTestId('user').textContent).toBe('null');
-    expect(screen.getByTestId('token').textContent).toBe('no-token');
+      const result = await userEvent.click(screen.getByTestId('register-btn'));
+      expect(result).toBeDefined();
+    });
+  });
 
-    // And navigation to /login should have occurred
-    expect(mockNavigate).toHaveBeenCalledWith('/login');
+  describe('Login', () => {
+    test('successful login sets user and token', async () => {
+      const mockLoginResponse = {
+        data: {
+          token: 'new-token',
+          userId: '123',
+          username: 'testuser'
+        }
+      };
+      api.post.mockResolvedValueOnce(mockLoginResponse);
+
+      render(
+        <MemoryRouter>
+          <AuthProvider>
+            <TestComponent />
+          </AuthProvider>
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('loading').textContent).toBe('false');
+      });
+
+      await userEvent.click(screen.getByTestId('login-btn'));
+
+      expect(api.post).toHaveBeenCalledWith('/auth/login', {
+        username: 'testuser',
+        password: 'password'
+      });
+
+      expect(screen.getByTestId('user').textContent).toBe('testuser');
+      expect(screen.getByTestId('token').textContent).toBe('new-token');
+      expect(localStorage.getItem('token')).toBe('new-token');
+      expect(JSON.parse(localStorage.getItem('user'))).toEqual({
+        id: '123',
+        username: 'testuser'
+      });
+    });
+
+    test('failed login returns error and does not set user/token', async () => {
+      api.post.mockRejectedValueOnce({
+        response: { data: { message: 'Invalid credentials' } }
+      });
+
+      render(
+        <MemoryRouter>
+          <AuthProvider>
+            <TestComponent />
+          </AuthProvider>
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('loading').textContent).toBe('false');
+      });
+
+      await userEvent.click(screen.getByTestId('login-btn'));
+
+      expect(screen.getByTestId('user').textContent).toBe('null');
+      expect(screen.getByTestId('token').textContent).toBe('no-token');
+      expect(localStorage.getItem('token')).toBeNull();
+      expect(localStorage.getItem('user')).toBeNull();
+    });
+  });
+
+  describe('Logout', () => {
+    test('logout clears user, token, and navigates to login', async () => {
+      localStorage.setItem('user', JSON.stringify({ id: '99', username: 'LocalUser' }));
+      localStorage.setItem('token', 'local-token');
+
+      render(
+        <MemoryRouter>
+          <AuthProvider>
+            <TestComponent />
+          </AuthProvider>
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('loading').textContent).toBe('false');
+      });
+
+      expect(screen.getByTestId('user').textContent).toBe('LocalUser');
+
+      await userEvent.click(screen.getByTestId('logout-btn'));
+
+      expect(localStorage.getItem('user')).toBeNull();
+      expect(localStorage.getItem('token')).toBeNull();
+      expect(screen.getByTestId('user').textContent).toBe('null');
+      expect(screen.getByTestId('token').textContent).toBe('no-token');
+      expect(mockNavigate).toHaveBeenCalledWith('/login');
+    });
+  });
+
+  describe('API Token Management', () => {
+    test('sets Authorization header when token exists', async () => {
+      localStorage.setItem('token', 'test-token');
+
+      render(
+        <MemoryRouter>
+          <AuthProvider>
+            <TestComponent />
+          </AuthProvider>
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(api.defaults.headers.common['Authorization']).toBe('Bearer test-token');
+      });
+    });
+
+    test('removes Authorization header when token is removed', async () => {
+      localStorage.setItem('token', 'test-token');
+
+      render(
+        <MemoryRouter>
+          <AuthProvider>
+            <TestComponent />
+          </AuthProvider>
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(api.defaults.headers.common['Authorization']).toBe('Bearer test-token');
+      });
+
+      await userEvent.click(screen.getByTestId('logout-btn'));
+
+      expect(api.defaults.headers.common['Authorization']).toBeUndefined();
+    });
   });
 });
