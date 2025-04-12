@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import GameBoard from './GameBoard';
 import PlayerInfo from './PlayerInfo';
 import GameActions from './GameActions';
@@ -71,76 +71,16 @@ const Game = () => {
   const [gameLog, setGameLog] = useState([]);
   const [error] = useState(null);
   const [aiTurnActive, setAiTurnActive] = useState(false);
-
-  useEffect(() => {
-    // Initialize the game log with a welcome message
-    setGameLog([
-      {
-        type: 'info',
-        player: 'Game',
-        content: 'Welcome to Clue-Less! Your turn to play.',
-        timestamp: new Date()
-      }
-    ]);
-  }, []);
-
-  // AI turn handling
-  useEffect(() => {
-    const isAiTurn = gameState.currentTurn !== currentUser.id;
-    
-    if (isAiTurn && !aiTurnActive) {
-      setAiTurnActive(true);
-      const aiPlayer = gameState.players.find(p => p.userId === gameState.currentTurn);
-      
-      if (aiPlayer) {
-        // Log that AI is thinking
-        const thinkingEntry = {
-          type: 'info',
-          player: aiPlayer.username,
-          content: 'is thinking...',
-          timestamp: new Date()
-        };
-        setGameLog(prev => [thinkingEntry, ...prev]);
-        
-        // Wait a bit to simulate thinking
-        const timeout = setTimeout(() => {
-          performAiTurn(aiPlayer);
-          setAiTurnActive(false);
-        }, 2000);
-        
-        return () => clearTimeout(timeout);
-      }
-    }
-  }, [gameState.currentTurn, aiTurnActive]);
-
-  // Perform AI player turn
-  const performAiTurn = useCallback((aiPlayer) => {
-    const actions = ['move', 'suggest', 'accuse', 'end'];
-    const randomAction = actions[Math.floor(Math.random() * actions.length)];
-    
-    switch(randomAction) {
-      case 'move':
-        performAiMove(aiPlayer);
-        break;
-      case 'suggest':
-        performAiSuggestion(aiPlayer);
-        break;
-      case 'accuse':
-        // 10% chance to make an accusation
-        if (Math.random() < 0.1) {
-          performAiAccusation(aiPlayer);
-        } else {
-          performAiMove(aiPlayer);
-        }
-        break;
-      case 'end':
-      default:
-        performAiEndTurn(aiPlayer);
-        break;
-    }
-  }, []);
   
-  const performAiMove = (aiPlayer) => {
+  // Use refs to avoid dependency cycles
+  const performAiMoveRef = useRef();
+  const performAiSuggestionRef = useRef();
+  const performAiAccusationRef = useRef();
+  const performAiEndTurnRef = useRef();
+  const performAiTurnRef = useRef();
+
+  // Define AI actions
+  performAiMoveRef.current = (aiPlayer) => {
     // Get possible destinations
     const currentPosition = aiPlayer.position;
     const possibleDestinations = [];
@@ -194,14 +134,14 @@ const Game = () => {
       
       // Small delay before ending turn
       setTimeout(() => {
-        performAiEndTurn(aiPlayer);
+        performAiEndTurnRef.current(aiPlayer);
       }, 1000);
     } else {
-      performAiEndTurn(aiPlayer);
+      performAiEndTurnRef.current(aiPlayer);
     }
   };
   
-  const performAiSuggestion = (aiPlayer) => {
+  performAiSuggestionRef.current = (aiPlayer) => {
     const characters = ['Colonel Mustard', 'Miss Scarlet', 'Professor Plum', 'Mr. Green', 'Mrs. White', 'Mrs. Peacock'];
     const weapons = ['Knife', 'Candlestick', 'Revolver', 'Rope', 'Lead Pipe', 'Wrench'];
     
@@ -236,14 +176,14 @@ const Game = () => {
       
       // End turn after suggestion
       setTimeout(() => {
-        performAiEndTurn(aiPlayer);
+        performAiEndTurnRef.current(aiPlayer);
       }, 1000);
     } else {
-      performAiEndTurn(aiPlayer);
+      performAiEndTurnRef.current(aiPlayer);
     }
   };
   
-  const performAiAccusation = (aiPlayer) => {
+  performAiAccusationRef.current = (aiPlayer) => {
     const characters = ['Colonel Mustard', 'Miss Scarlet', 'Professor Plum', 'Mr. Green', 'Mrs. White', 'Mrs. Peacock'];
     const weapons = ['Knife', 'Candlestick', 'Revolver', 'Rope', 'Lead Pipe', 'Wrench'];
     const rooms = ['Study', 'Hall', 'Lounge', 'Library', 'Billiard Room', 'Dining Room', 'Conservatory', 'Ballroom', 'Kitchen'];
@@ -288,10 +228,10 @@ const Game = () => {
       }, 500);
     }
     
-    performAiEndTurn(aiPlayer);
+    performAiEndTurnRef.current(aiPlayer);
   };
   
-  const performAiEndTurn = (aiPlayer) => {
+  performAiEndTurnRef.current = (aiPlayer) => {
     // Cycle to next player
     const playerIds = gameState.players.map(p => p.userId);
     const currentIndex = playerIds.indexOf(gameState.currentTurn);
@@ -313,6 +253,74 @@ const Game = () => {
     
     setGameLog(prev => [newEntry, ...prev]);
   };
+  
+  // Perform AI player turn
+  performAiTurnRef.current = (aiPlayer) => {
+    const actions = ['move', 'suggest', 'accuse', 'end'];
+    const randomAction = actions[Math.floor(Math.random() * actions.length)];
+    
+    switch(randomAction) {
+      case 'move':
+        performAiMoveRef.current(aiPlayer);
+        break;
+      case 'suggest':
+        performAiSuggestionRef.current(aiPlayer);
+        break;
+      case 'accuse':
+        // 10% chance to make an accusation
+        if (Math.random() < 0.1) {
+          performAiAccusationRef.current(aiPlayer);
+        } else {
+          performAiMoveRef.current(aiPlayer);
+        }
+        break;
+      case 'end':
+      default:
+        performAiEndTurnRef.current(aiPlayer);
+        break;
+    }
+  };
+
+  // AI turn handling
+  useEffect(() => {
+    const isAiTurn = gameState.currentTurn !== currentUser.id;
+    
+    if (isAiTurn && !aiTurnActive) {
+      setAiTurnActive(true);
+      const aiPlayer = gameState.players.find(p => p.userId === gameState.currentTurn);
+      
+      if (aiPlayer) {
+        // Log that AI is thinking
+        const thinkingEntry = {
+          type: 'info',
+          player: aiPlayer.username,
+          content: 'is thinking...',
+          timestamp: new Date()
+        };
+        setGameLog(prev => [thinkingEntry, ...prev]);
+        
+        // Wait a bit to simulate thinking
+        const timeout = setTimeout(() => {
+          performAiTurnRef.current(aiPlayer);
+          setAiTurnActive(false);
+        }, 2000);
+        
+        return () => clearTimeout(timeout);
+      }
+    }
+  }, [gameState.currentTurn, aiTurnActive, currentUser.id, gameState.players]);
+
+  useEffect(() => {
+    // Initialize the game log with a welcome message
+    setGameLog([
+      {
+        type: 'info',
+        player: 'Game',
+        content: 'Welcome to Clue-Less! Your turn to play.',
+        timestamp: new Date()
+      }
+    ]);
+  }, []);
 
   const handleMove = (destination) => {
     // Local mock implementation
