@@ -25,6 +25,8 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
+      - name: Install dependencies
+        run: npm install
       - name: Install client dependencies
         run: cd client && npm install
       - name: Set CI to false to ignore warnings
@@ -36,6 +38,10 @@ jobs:
           SKIP_PREFLIGHT_CHECK: true
           # Bypass error from broken tests
           CI: false
+      # Copy index.html to root of build for direct access
+      - name: Copy index to root and 404
+        run: |
+          cp client/build/index.html client/build/404.html
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
