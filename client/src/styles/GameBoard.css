@@ -1,0 +1,210 @@
+.game-board {
+  width: 100%;
+  max-width: 450px;
+  margin: 0 auto;
+  padding: 5px;
+  background-color: #f8f8f8;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.board-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(5, 1fr);
+  gap: 2px;
+  aspect-ratio: 1/1;
+}
+
+.room {
+  background-color: #e8e8e8;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  cursor: pointer;
+  padding: 2px;
+  text-align: center;
+  min-height: 40px;
+}
+
+.room:hover {
+  background-color: #d8d8d8;
+}
+
+.room-name {
+  font-size: 0.7rem;
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+
+.hallway {
+  background-color: #f0f0f0;
+  border: 1px dashed #ccc;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+
+.hallway:hover {
+  background-color: #e0e0e0;
+}
+
+.hallway.horizontal {
+  grid-row: span 1;
+}
+
+.hallway.vertical {
+  grid-column: span 1;
+}
+
+.empty {
+  background-color: transparent;
+}
+
+.player-token {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 0.7rem;
+  font-weight: bold;
+  border: 2px solid #444;
+  position: relative;
+  z-index: 5;
+  margin: 1px;
+}
+
+.current-player {
+  border: 2px solid #00baff;
+  box-shadow: 0 0 5px #00baff;
+}
+
+.player-token.current-player {
+  border: 2px solid #00baff;
+  box-shadow: 0 0 5px #00baff;
+}
+
+.player-token.active-turn {
+  box-shadow: 0 0 10px 2px #FFD700, 0 0 20px 5px rgba(255, 215, 0, 0.4);
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 10px 2px #FFD700, 0 0 20px 5px rgba(255, 215, 0, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 15px 4px #FFD700, 0 0 25px 8px rgba(255, 215, 0, 0.6);
+  }
+  100% {
+    box-shadow: 0 0 10px 2px #FFD700, 0 0 20px 5px rgba(255, 215, 0, 0.4);
+  }
+}
+
+@media (max-width: 600px) {
+  .room-name {
+    font-size: 0.55rem;
+  }
+  
+  .player-token {
+    width: 16px;
+    height: 16px;
+    font-size: 0.6rem;
+  }
+  
+  .room {
+    min-height: 30px;
+  }
+}
+
+/* Starting positions */
+.starting-positions {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.start-position {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: auto;
+}
+
+.start-position.top-left {
+  top: 5%;
+  left: 5%;
+}
+
+.start-position.top-right {
+  top: 5%;
+  right: 5%;
+}
+
+.start-position.middle-left {
+  top: 50%;
+  left: 5%;
+  transform: translateY(-50%);
+}
+
+.start-position.middle-right {
+  top: 50%;
+  right: 5%;
+  transform: translateY(-50%);
+}
+
+.start-position.bottom-left {
+  bottom: 5%;
+  left: 5%;
+}
+
+.start-position.bottom-right {
+  bottom: 5%;
+  right: 5%;
+}
+
+/* Secret passages */
+.secret-passages {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.passage {
+  position: absolute;
+  border: 2px dashed #7f8c8d;
+  opacity: 0.5;
+}
+
+.passage.study-kitchen {
+  top: 15%;
+  left: 15%;
+  width: 70%;
+  height: 70%;
+  border-radius: 100% 0% 100% 0%;
+}
+
+.passage.lounge-conservatory {
+  top: 15%;
+  left: 15%;
+  width: 70%;
+  height: 70%;
+  border-radius: 0% 100% 0% 100%;
+} 

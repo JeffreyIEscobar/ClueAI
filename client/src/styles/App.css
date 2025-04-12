@@ -1,0 +1,119 @@
+/* Global styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --primary-color: #2c3e50;
+  --secondary-color: #3498db;
+  --accent-color: #e74c3c;
+  --background-color: #f5f5f5;
+  --text-color: #333;
+  --light-gray: #eee;
+  --medium-gray: #ddd;
+  --dark-gray: #999;
+  --success-color: #2ecc71;
+  --error-color: #e74c3c;
+  --warning-color: #f39c12;
+  
+  /* Character colors */
+  --color-mustard: #E6C700;
+  --color-scarlet: #FF2400;
+  --color-plum: #8E4585;
+  --color-green: #008000;
+  --color-white: #FFFFFF;
+  --color-peacock: #002366;
+}
+
+body {
+  font-family: 'Roboto', 'Helvetica Neue', sans-serif;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  line-height: 1.6;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--background-color);
+  color: var(--text-color);
+}
+
+/* Loading indicator */
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+  font-size: 1.2rem;
+  color: var(--dark-gray);
+}
+
+/* Error message */
+.error {
+  color: var(--error-color);
+  background-color: rgba(231, 76, 60, 0.1);
+  border: 1px solid var(--error-color);
+  border-radius: 4px;
+  padding: 10px;
+  margin: 10px 0;
+  font-size: 0.9rem;
+}
+
+/* Button styles */
+button {
+  cursor: pointer;
+  background-color: var(--secondary-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-size: 1rem;
+  transition: background-color 0.3s;
+}
+
+button:hover {
+  background-color: #2980b9;
+}
+
+button:disabled {
+  background-color: var(--medium-gray);
+  cursor: not-allowed;
+}
+
+/* Form elements */
+input, select {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 1rem;
+  border: 1px solid var(--medium-gray);
+  border-radius: 4px;
+  background-color: white;
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: var(--secondary-color);
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+/* Card styles */
+.card {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+  margin-bottom: 16px;
+} 

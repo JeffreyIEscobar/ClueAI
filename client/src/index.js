@@ -9,6 +9,12 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import './styles/index.css';
 
+// Configure React Router future flags
+window.__reactRouterFutureFlags = {
+  v7_startTransition: true,
+  v7_relativeSplatPath: true
+};
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
