@@ -38,10 +38,11 @@ jobs:
           SKIP_PREFLIGHT_CHECK: true
           # Bypass error from broken tests
           CI: false
-      # Copy index.html to root of build for direct access
-      - name: Copy index to root and 404
+      # Create redirects and 404 handling for GitHub Pages
+      - name: Create redirects for GitHub Pages
         run: |
           cp client/build/index.html client/build/404.html
+          echo "/* /index.html 200" > client/build/_redirects
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact

@@ -9,6 +9,16 @@
       content="Clue-Less Game System"
     />
     <title>Clue-Less</title>
+    <!-- Handle GitHub Pages 404 redirects -->
+    <script>
+      (function(){
+        let redirect = sessionStorage.redirect;
+        delete sessionStorage.redirect;
+        if (redirect && redirect !== location.href) {
+          history.replaceState(null, null, redirect);
+        }
+      })();
+    </script>
     <!-- Start Single Page Apps for GitHub Pages -->
     <script type="text/javascript">
       // Single Page Apps for GitHub Pages
