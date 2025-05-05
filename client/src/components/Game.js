@@ -374,18 +374,22 @@ const Game = () => {
        const canSuggest = gameState.board.rooms.some(r => r.id === aiPlayer.position);
        const accuseRoll = Math.random(); // Roll for accusation chance
 
+       // <<< Add detailed logging before decision >>>
+       console.log(`Connected User: ${aiPlayer.username} Turn ${aiPlayer.turnCount + 1} - Checking actions: Can Move=${canMove}, Can Suggest=${canSuggest} (needs turn > 1), Can Accuse=${aiPlayer.turnCount > 1} (needs turn > 2)`);
+
+       // --- Decision Logic --- 
        if (canMove) {
          console.log(`Connected User: ${aiPlayer.username} decided to MOVE.`);
          performAiMoveRef.current(aiPlayer);
-       } else if (canSuggest && aiPlayer.turnCount > 0) { // <<< Suggest only AFTER turn 1 >>>
+       } else if (canSuggest && aiPlayer.turnCount > 0) { // Suggest possible after turn 1 (if cannot move)
          console.log(`Connected User: ${aiPlayer.username} decided to SUGGEST (Turn: ${aiPlayer.turnCount + 1}).`);
          performAiSuggestionRef.current(aiPlayer);
-       } else if (aiPlayer.turnCount > 1 && accuseRoll < 0.2) { // <<< Accuse only AFTER turn 2 (20% chance) >>>
+       } else if (aiPlayer.turnCount > 1 && accuseRoll < 0.2) { // Accuse possible after turn 2 (if cannot move/suggest, 20% chance)
          console.log(`Connected User: ${aiPlayer.username} decided to ACCUSE (Turn: ${aiPlayer.turnCount + 1}).`);
          performAiAccusationRef.current(aiPlayer);
        } else {
-         console.log(`Connected User: ${aiPlayer.username} decided to END TURN (No move; Suggest possible: ${canSuggest}, Accuse possible: ${aiPlayer.turnCount > 1}).`);
-         // Cannot move, cannot suggest (or too early), and not accusing (or too early / failed roll) - End Turn
+         // Log the reason for ending turn more clearly
+         console.log(`Connected User: ${aiPlayer.username} decided to END TURN (Cannot Move; Suggest allowed=${canSuggest && aiPlayer.turnCount > 0}; Accuse allowed=${aiPlayer.turnCount > 1 && accuseRoll < 0.2}).`);
          performAiEndTurnRef.current(aiPlayer);
        }
 
