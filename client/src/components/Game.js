@@ -137,6 +137,10 @@ const Game = () => {
       };
       
       setGameLog(prev => [newEntry, ...prev]);
+
+      // End the turn after moving
+      performAiEndTurnRef.current(aiPlayer);
+
     } else {
       // If no possible moves, end turn immediately
       performAiEndTurnRef.current(aiPlayer);
