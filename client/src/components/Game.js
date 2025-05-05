@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import GameBoard from './GameBoard';
 import PlayerInfo from './PlayerInfo';
 import GameActions from './GameActions';
@@ -76,6 +76,7 @@ const Game = () => {
   const [gameLog, setGameLog] = useState([]);
   const [error] = useState(null);
   const [aiTurnActive, setAiTurnActive] = useState(false);
+  const [thinking, setThinking] = useState(false);
   
   // Use refs to avoid dependency cycles
   const performAiMoveRef = useRef();
@@ -136,12 +137,8 @@ const Game = () => {
       };
       
       setGameLog(prev => [newEntry, ...prev]);
-      
-      // Small delay before ending turn
-      setTimeout(() => {
-        performAiEndTurnRef.current(aiPlayer);
-      }, 1000);
     } else {
+      // If no possible moves, end turn immediately
       performAiEndTurnRef.current(aiPlayer);
     }
   };
@@ -178,12 +175,12 @@ const Game = () => {
       };
       
       setGameLog(prev => [newEntry, ...prev]);
-      
-      // End turn after suggestion
-      setTimeout(() => {
-        performAiEndTurnRef.current(aiPlayer);
-      }, 1000);
+
+      // AI suggestion doesn't involve real disprove logic in this mock
+      // Directly end turn after suggesting
+      performAiEndTurnRef.current(aiPlayer);
     } else {
+      // Cannot suggest from hallway, end turn
       performAiEndTurnRef.current(aiPlayer);
     }
   };
@@ -235,89 +232,106 @@ const Game = () => {
     } else {
       // Incorrect accusation doesn't end the game in this mock
       // but you might disable the player or show a message
+      setGameLog(prev => [{
+        type: 'info',
+        player: aiPlayer.username,
+        content: `made an incorrect accusation.`,
+        timestamp: new Date()
+      }, ...prev]);
     }
-    
+
+    // End turn regardless of accusation result
     performAiEndTurnRef.current(aiPlayer);
   };
   
   performAiEndTurnRef.current = (aiPlayer) => {
-    // Cycle to next player
-    const playerIds = gameState.players.map(p => p.userId);
-    const currentIndex = playerIds.indexOf(gameState.currentTurn);
-    const nextIndex = (currentIndex + 1) % playerIds.length;
-    const nextPlayerId = playerIds[nextIndex];
-    
-    setGameState(prev => ({
-      ...prev,
-      currentTurn: nextPlayerId
-    }));
-    
-    // Add to game log
-    const newEntry = {
-      type: 'turn',
+    // Add log entry for ending turn
+    const endTurnEntry = {
+      type: 'info',
       player: aiPlayer.username,
-      content: 'ended their turn',
+      content: `ended their turn.`,
       timestamp: new Date()
     };
-    
-    setGameLog(prev => [newEntry, ...prev]);
-  };
-  
-  // Perform AI player turn
-  performAiTurnRef.current = (aiPlayer) => {
-    const actions = ['move', 'suggest', 'accuse', 'end'];
-    const randomAction = actions[Math.floor(Math.random() * actions.length)];
-    
-    switch(randomAction) {
-      case 'move':
-        performAiMoveRef.current(aiPlayer);
-        break;
-      case 'suggest':
-        performAiSuggestionRef.current(aiPlayer);
-        break;
-      case 'accuse':
-        // 10% chance to make an accusation
-        if (Math.random() < 0.1) {
-          performAiAccusationRef.current(aiPlayer);
-        } else {
-          performAiMoveRef.current(aiPlayer);
+    setGameLog(prev => [endTurnEntry, ...prev]);
+
+    // Cycle to next player after a short delay for UI update
+    setTimeout(() => {
+      const playerIds = gameState.players.map(p => p.userId);
+      const currentIndex = playerIds.indexOf(aiPlayer.userId); // Use aiPlayer.userId passed in
+      const nextIndex = (currentIndex + 1) % playerIds.length;
+      const nextPlayerId = playerIds[nextIndex];
+
+      setGameState(prev => ({
+        ...prev,
+        currentTurn: nextPlayerId,
+        // Reset available actions for the next player (mockup simplification)
+        availableActions: {
+          canMove: true,
+          canSuggest: true,
+          canAccuse: true,
+          canEndTurn: true
         }
-        break;
-      case 'end':
-      default:
-        performAiEndTurnRef.current(aiPlayer);
-        break;
-    }
+      }));
+      setThinking(false); // Stop thinking visual
+      setAiTurnActive(false); // Allow next AI turn trigger if applicable
+    }, 500); // Short delay
   };
 
-  // AI turn handling
-  useEffect(() => {
-    const isAiTurn = gameState.currentTurn !== currentUser.id;
-    
-    if (isAiTurn && !aiTurnActive) {
-      setAiTurnActive(true);
-      const aiPlayer = gameState.players.find(p => p.userId === gameState.currentTurn);
-      
-      if (aiPlayer) {
-        // Log that AI is thinking
-        const thinkingEntry = {
-          type: 'info',
-          player: aiPlayer.username,
-          content: 'is thinking...',
-          timestamp: new Date()
-        };
-        setGameLog(prev => [thinkingEntry, ...prev]);
-        
-        // Wait a bit to simulate thinking (3 seconds)
-        const timeout = setTimeout(() => {
-          performAiTurnRef.current(aiPlayer);
-          setAiTurnActive(false);
-        }, 3000); // Changed timeout to 3 seconds
-        
-        return () => clearTimeout(timeout);
-      }
+  // New function to handle the complete AI turn sequence
+  performAiTurnRef.current = useCallback(() => {
+    if (aiTurnActive) return; // Prevent overlapping calls
+
+    const aiPlayer = gameState.players.find(p => p.userId === gameState.currentTurn);
+    if (!aiPlayer || aiPlayer.userId === currentUser.id) {
+      setAiTurnActive(false); // Should not happen, but safety check
+      return;
     }
-  }, [gameState.currentTurn, aiTurnActive, currentUser.id, gameState.players]);
+
+    setAiTurnActive(true);
+    setThinking(true); // Show thinking state
+
+    const thinkingEntry = {
+      type: 'info',
+      player: aiPlayer.username,
+      content: `is thinking...`,
+      timestamp: new Date()
+    };
+    setGameLog(prev => [thinkingEntry, ...prev]);
+
+
+    // Simulate thinking delay
+    const thinkingTime = Math.random() * 1500 + 500; // 0.5s to 2s delay
+    setTimeout(() => {
+       // Decide action
+       // Simple random choice for now: 60% move, 20% suggest, 10% accuse, 10% end turn immediately
+       const actionRoll = Math.random();
+       const canSuggest = gameState.board.rooms.some(r => r.id === aiPlayer.position);
+
+       if (actionRoll < 0.6) { // Try Move
+         performAiMoveRef.current(aiPlayer);
+       } else if (actionRoll < 0.8 && canSuggest) { // Try Suggest (only if in room)
+         performAiSuggestionRef.current(aiPlayer);
+       } else if (actionRoll < 0.9) { // Try Accuse
+         performAiAccusationRef.current(aiPlayer);
+       } else { // End Turn immediately
+         performAiEndTurnRef.current(aiPlayer);
+       }
+       // Note: The chosen action function will now call performAiEndTurnRef itself.
+
+    }, thinkingTime);
+
+  // Rerun when currentTurn changes, but only if it's an AI's turn
+  }, [aiTurnActive, currentUser.id, gameState.currentTurn, gameState.players, gameState.board.rooms]);
+
+
+  // Effect to trigger AI turn
+  useEffect(() => {
+    const currentPlayerIsAI = gameState.currentTurn !== currentUser.id;
+    // Ensure gameState is loaded and it's an AI's turn and no AI turn is already running
+    if (gameState && gameState.players.length > 0 && currentPlayerIsAI && !aiTurnActive && performAiTurnRef.current) {
+       performAiTurnRef.current();
+    }
+  }, [gameState, currentUser.id, aiTurnActive]);
 
   useEffect(() => {
     // Initialize the game log with a welcome message
@@ -462,28 +476,33 @@ const Game = () => {
   };
 
   const handleEndTurn = () => {
-    // Local mock implementation
-    console.log('Ending turn');
-    // Cycle to next player
-    const playerIds = gameState.players.map(p => p.userId);
-    const currentIndex = playerIds.indexOf(gameState.currentTurn);
-    const nextIndex = (currentIndex + 1) % playerIds.length;
-    const nextPlayerId = playerIds[nextIndex];
-    
-    setGameState(prev => ({
-      ...prev,
-      currentTurn: nextPlayerId
-    }));
-    
-    // Add to game log using functional update
-    const newEntry = {
-      type: 'turn',
-      player: currentUser.username,
-      content: 'ended their turn',
+    // Add log entry
+    const player = gameState.players.find(p => p.userId === currentUser.id);
+    const endTurnEntry = {
+      type: 'info',
+      player: player?.username || 'Current Player',
+      content: `ended their turn.`,
       timestamp: new Date()
     };
-    
-    setGameLog(prev => [newEntry, ...prev]); // Use functional update
+    setGameLog(prev => [endTurnEntry, ...prev]);
+
+    // Cycle to next player
+    const playerIds = gameState.players.map(p => p.userId);
+    const currentIndex = playerIds.indexOf(currentUser.id);
+    const nextIndex = (currentIndex + 1) % playerIds.length;
+    const nextPlayerId = playerIds[nextIndex];
+
+    setGameState(prev => ({
+      ...prev,
+      currentTurn: nextPlayerId,
+      // Reset available actions for the next player (mockup simplification)
+      availableActions: {
+        canMove: true,
+        canSuggest: true,
+        canAccuse: true,
+        canEndTurn: true
+      }
+    }));
   };
 
   if (error) {
@@ -493,13 +512,18 @@ const Game = () => {
   const isCurrentTurn = gameState.currentTurn === currentUser?.id;
   const availableActions = gameState.availableActions || {};
 
+  // Get current player data
+  const currentPlayer = gameState.players.find(player => player.userId === gameState.currentTurn);
+  const currentTurnUsername = currentPlayer?.username || 'Unknown';
+  const isMyTurn = gameState.currentTurn === currentUser.id;
+
   return (
     <div className="game-container">
       <header className="game-header">
         <h1>Clue-Less Game</h1>
-        <div className="current-turn-indicator">
-          Turn: {gameState.players.find(p => p.userId === gameState.currentTurn)?.username}
-        </div>
+        <span className="current-turn-indicator">
+           Turn: {currentTurnUsername} {thinking && !isMyTurn ? '(Thinking...)' : ''}
+         </span>
       </header>
 
       <div className="game-content">
@@ -551,9 +575,12 @@ const Game = () => {
       )}
       
       {showDisproveModal && disproveData && (
-        <DisproveModal 
-          data={disproveData}
-          onClose={() => setShowDisproveModal(false)} 
+        <DisproveModal
+          suggestion={disproveData.suggestion}
+          disprovingPlayer={disproveData.disprovingPlayer}
+          possibleCards={disproveData.possibleCards}
+          onDisprove={(card) => { /* Mock: handleDisprove(card) */ setShowDisproveModal(false); }}
+          onClose={() => setShowDisproveModal(false)}
         />
       )}
     </div>
