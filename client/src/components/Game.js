@@ -111,10 +111,16 @@ const Game = () => {
       possibleDestinations.push('lounge');
     }
     
-    // Choose random destination
-    if (possibleDestinations.length > 0) {
-      const randomDestination = possibleDestinations[Math.floor(Math.random() * possibleDestinations.length)];
+    // Filter out the current position to ensure the AI actually moves
+    const validDestinations = possibleDestinations.filter(dest => dest !== currentPosition);
+
+    // Choose random destination from valid ones
+    if (validDestinations.length > 0) {
+      const randomDestination = validDestinations[Math.floor(Math.random() * validDestinations.length)];
       
+      // <<< ADD CONSOLE LOG FOR DEBUGGING >>>
+      console.log(`AI Debug: ${aiPlayer.username} moving from ${currentPosition} to ${randomDestination}`);
+
       // Update the player position
       const updatedPlayers = gameState.players.map(player => {
         if (player.userId === aiPlayer.userId) {
@@ -302,9 +308,8 @@ const Game = () => {
     };
     setGameLog(prev => [thinkingEntry, ...prev]);
 
-
     // Simulate thinking delay
-    const thinkingTime = Math.random() * 5000 + 10000; // 10s to 15s delay
+    const thinkingTime = 8000; // Fixed 8 seconds delay
     setTimeout(() => {
        // Decide action
        // --- REMOVE RANDOM ACTION LOGIC ---
