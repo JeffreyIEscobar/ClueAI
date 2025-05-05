@@ -18,9 +18,9 @@ const MOCK_GAME_STATE = {
   gameId: 'game-1',
   status: 'in_progress',
   players: [
-    { userId: 'user-1', username: 'Player1', character: 'Miss Scarlet', position: 'study', cards: ['Mrs. White', 'Kitchen', 'Revolver'], status: 'active' },
-    { userId: 'user-2', username: 'Player2', character: 'Professor Plum', position: 'hall', cards: [], status: 'active' },
-    { userId: 'user-3', username: 'Player3', character: 'Mrs. Peacock', position: 'lounge', cards: [], status: 'active' }
+    { userId: 'user-1', username: 'Player1', character: 'Miss Scarlet', position: 'study', cards: ['Mrs. White', 'Kitchen', 'Revolver'], status: 'active', turnCount: 0 },
+    { userId: 'user-2', username: 'Player2', character: 'Professor Plum', position: 'hall', cards: [], status: 'active', turnCount: 0 },
+    { userId: 'user-3', username: 'Player3', character: 'Mrs. Peacock', position: 'lounge', cards: [], status: 'active', turnCount: 0 }
   ],
   board: {
     rooms: [
@@ -289,8 +289,19 @@ const Game = () => {
       }
       const nextPlayerId = playerIds[nextIndex];
 
+      // Increment turn count for the player whose turn just ended
+      const finishedPlayerIndex = gameState.players.findIndex(p => p.userId === aiPlayer.userId);
+      const updatedPlayers = [...gameState.players];
+      if (finishedPlayerIndex !== -1) {
+          updatedPlayers[finishedPlayerIndex] = {
+              ...updatedPlayers[finishedPlayerIndex],
+              turnCount: updatedPlayers[finishedPlayerIndex].turnCount + 1
+          };
+      }
+
       setGameState(prev => ({
         ...prev,
+        players: updatedPlayers, // Update players with incremented turn count
         currentTurn: nextPlayerId,
         // Reset available actions for the next player (mockup simplification)
         availableActions: {
@@ -341,26 +352,32 @@ const Game = () => {
     // Simulate thinking delay
     const thinkingTime = 8000; // Fixed 8 seconds delay
     setTimeout(() => {
-       // Decide action - Restore random logic
-       const actionRoll = Math.random();
-       const canSuggest = gameState.board.rooms.some(r => r.id === aiPlayer.position);
-       const canMove = gameState.board.hallways.some(h => h.from === aiPlayer.position || h.to === aiPlayer.position);
+       // Decide action - Prioritize Move > Suggest > Accuse (after turn 1)
+       const currentPosition = aiPlayer.position;
+       const possibleDestinations = [];
+       gameState.board.hallways.forEach(hallway => {
+         if (hallway.from === currentPosition) possibleDestinations.push(hallway.to);
+         else if (hallway.to === currentPosition) possibleDestinations.push(hallway.from);
+       });
+       if (currentPosition === 'study') possibleDestinations.push('kitchen');
+       else if (currentPosition === 'kitchen') possibleDestinations.push('study');
+       else if (currentPosition === 'lounge') possibleDestinations.push('conservatory');
+       else if (currentPosition === 'conservatory') possibleDestinations.push('lounge');
+       const validDestinations = possibleDestinations.filter(dest => dest !== currentPosition);
 
-       // Probabilities: Move (50%), Suggest (30% if possible), Accuse (10%), End (10% or if others fail)
-       if (actionRoll < 0.5 && canMove) { // Try Move
+       const canMove = validDestinations.length > 0;
+       const canSuggest = gameState.board.rooms.some(r => r.id === aiPlayer.position);
+       const accuseRoll = Math.random(); // Roll for accusation chance
+
+       if (canMove) {
          performAiMoveRef.current(aiPlayer);
-       } else if (actionRoll < 0.8 && canSuggest) { // Try Suggest (only if in room)
+       } else if (canSuggest) {
          performAiSuggestionRef.current(aiPlayer);
-       } else if (actionRoll < 0.9) { // Try Accuse
+       } else if (aiPlayer.turnCount > 0 && accuseRoll < 0.2) { // 20% chance to accuse after turn 1
          performAiAccusationRef.current(aiPlayer);
-       } else { // End Turn (or if move/suggest wasn't possible)
-          // If suggest was attempted but failed (not in room), try move if possible
-          if (actionRoll >= 0.5 && actionRoll < 0.8 && !canSuggest && canMove) {
-              performAiMoveRef.current(aiPlayer);
-          } else {
-              // Otherwise, just end the turn
-              performAiEndTurnRef.current(aiPlayer);
-          }
+       } else {
+         // Cannot move, cannot suggest, and not accusing - End Turn
+         performAiEndTurnRef.current(aiPlayer);
        }
 
     }, thinkingTime);
@@ -538,8 +555,14 @@ const Game = () => {
     const nextIndex = (currentIndex + 1) % playerIds.length;
     const nextPlayerId = playerIds[nextIndex];
 
+    // Increment turn count for the human player as well
+    const updatedPlayers = gameState.players.map(p =>
+        p.userId === currentUser.id ? { ...p, turnCount: p.turnCount + 1 } : p
+    );
+
     setGameState(prev => ({
       ...prev,
+      players: updatedPlayers, // Update players state
       currentTurn: nextPlayerId,
       // Reset available actions for the next player (mockup simplification)
       availableActions: {
