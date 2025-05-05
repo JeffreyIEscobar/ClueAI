@@ -274,44 +274,31 @@ const Game = () => {
     };
     setGameLog(prev => [endTurnEntry, ...prev]);
 
-    // Cycle to next ACTIVE player after a short delay for UI update
     setTimeout(() => {
-      const playerIds = gameState.players.map(p => p.userId);
-      const currentIndex = playerIds.indexOf(aiPlayer.userId);
-      let nextIndex = (currentIndex + 1) % playerIds.length;
-      let nextPlayer = gameState.players[nextIndex];
+      setGameState(prevState => {
+          const currentPlayers = prevState.players;
+          const playerIds = currentPlayers.map(p => p.userId);
+          const currentIndex = playerIds.indexOf(aiPlayer.userId);
+          let nextIndex = (currentIndex + 1) % playerIds.length;
+          let nextPlayer = currentPlayers[nextIndex];
 
-      // Find the next active player
-      while (nextPlayer.status === 'inactive') {
-          if (nextIndex === currentIndex) { // All players inactive? Should not happen in normal play
-              console.error("Error: Could not find next active player.");
-              setGameState(prev => ({ ...prev, status: 'finished' })); // End game?
-              return;
+          while (nextPlayer.status === 'inactive') {
+              if (nextIndex === currentIndex) { // All players inactive? Should not happen in normal play
+                  console.error("Error: Could not find next active player.");
+                  setGameState(prev => ({ ...prev, status: 'finished' })); // End game?
+                  return;
+              }
+              nextIndex = (nextIndex + 1) % playerIds.length;
+              nextPlayer = currentPlayers[nextIndex];
           }
-          nextIndex = (nextIndex + 1) % playerIds.length;
-          nextPlayer = gameState.players[nextIndex];
-      }
-      const nextPlayerId = playerIds[nextIndex];
+          const nextPlayerId = playerIds[nextIndex];
 
-      const currentPlayers = gameState.players;
-      const finishedPlayerIndex = currentPlayers.findIndex(p => p.userId === aiPlayer.userId);
-      let updatedPlayers = [...currentPlayers]; // Create a mutable copy
-      if (finishedPlayerIndex !== -1) {
-          // Increment turn count first
-          updatedPlayers[finishedPlayerIndex] = {
-              ...updatedPlayers[finishedPlayerIndex],
-              turnCount: updatedPlayers[finishedPlayerIndex].turnCount + 1
+          return {
+              ...prevState,
+              currentTurn: nextPlayerId,
+              availableActions: { canMove: true, canSuggest: true, canAccuse: true, canEndTurn: true }
           };
-      } // End of if (finishedPlayerIndex !== -1)
-
-      console.log("DIAGNOSTIC: Final updatedPlayers before setting state in endTurn:", updatedPlayers);
-
-      setGameState(prevState => ({
-        ...prevState,
-        players: updatedPlayers, // Use the potentially modified array
-        currentTurn: nextPlayerId,
-        availableActions: { canMove: true, canSuggest: true, canAccuse: true, canEndTurn: true }
-      }));
+      });
       setThinking(false);
       setAiTurnActive(false);
     }, 500);
