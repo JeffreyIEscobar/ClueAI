@@ -119,20 +119,23 @@ const Game = () => {
       const randomDestination = validDestinations[Math.floor(Math.random() * validDestinations.length)];
       
       // <<< ADD CONSOLE LOG FOR DEBUGGING >>>
-      console.log(`AI Debug: ${aiPlayer.username} moving from ${currentPosition} to ${randomDestination}`);
+      console.log(`AI Debug: ${aiPlayer.username} attempting move from ${currentPosition} to ${randomDestination}`);
 
       // Update the player position
-      const updatedPlayers = gameState.players.map(player => {
-        if (player.userId === aiPlayer.userId) {
-          return { ...player, position: randomDestination };
-        }
-        return player;
+      setGameState(prevState => {
+          const updatedPlayers = prevState.players.map(player => {
+              if (player.userId === aiPlayer.userId) {
+                  return { ...player, position: randomDestination };
+              }
+              return player;
+          });
+          const newState = {
+              ...prevState,
+              players: updatedPlayers
+          };
+          console.log(`AI Debug: ${aiPlayer.username} state AFTER move update:`, newState.players.find(p => p.userId === aiPlayer.userId));
+          return newState;
       });
-      
-      setGameState(prev => ({
-        ...prev,
-        players: updatedPlayers
-      }));
       
       // Add to game log
       const newEntry = {
@@ -171,9 +174,9 @@ const Game = () => {
         timestamp: new Date()
       };
       
-      setGameState(prev => ({
-        ...prev,
-        suggestions: [...(prev.suggestions || []), newSuggestion]
+      setGameState(prevState => ({
+        ...prevState,
+        suggestions: [...(prevState.suggestions || []), newSuggestion]
       }));
       
       // Update game log
@@ -219,9 +222,9 @@ const Game = () => {
       timestamp: new Date()
     };
     
-    setGameState(prev => ({
-      ...prev,
-      accusations: [...(prev.accusations || []), newAccusation]
+    setGameState(prevState => ({
+      ...prevState,
+      accusations: [...(prevState.accusations || []), newAccusation]
     }));
     
     // Update game log
@@ -241,11 +244,11 @@ const Game = () => {
       // Potentially update game status to 'finished'
     } else {
       // Incorrect accusation: Player is out
-      setGameState(prev => {
-        const updatedPlayers = prev.players.map(p =>
+      setGameState(prevState => {
+        const updatedPlayers = prevState.players.map(p =>
           p.userId === aiPlayer.userId ? { ...p, status: 'inactive' } : p
         );
-        return { ...prev, players: updatedPlayers };
+        return { ...prevState, players: updatedPlayers };
       });
 
       setGameLog(prev => [{
@@ -321,7 +324,11 @@ const Game = () => {
     if (aiTurnActive) return; // Prevent overlapping calls
 
     const aiPlayer = gameState.players.find(p => p.userId === gameState.currentTurn);
+    // <<< ADD CONSOLE LOG FOR AI TURN START >>>
+    console.log(`AI Debug: performAiTurn triggered for ${aiPlayer?.username} (ID: ${aiPlayer?.userId})`);
+
     if (!aiPlayer || aiPlayer.userId === currentUser.id) {
+      console.log(`AI Debug: performAiTurn exiting - not AI turn or player not found.`);
       setAiTurnActive(false); // Should not happen, but safety check
       return;
     }
@@ -370,12 +377,16 @@ const Game = () => {
        const accuseRoll = Math.random(); // Roll for accusation chance
 
        if (canMove) {
+         console.log(`AI Debug: ${aiPlayer.username} decided to MOVE.`);
          performAiMoveRef.current(aiPlayer);
        } else if (canSuggest) {
+         console.log(`AI Debug: ${aiPlayer.username} decided to SUGGEST.`);
          performAiSuggestionRef.current(aiPlayer);
        } else if (aiPlayer.turnCount > 0 && accuseRoll < 0.2) { // 20% chance to accuse after turn 1
+         console.log(`AI Debug: ${aiPlayer.username} decided to ACCUSE.`);
          performAiAccusationRef.current(aiPlayer);
        } else {
+         console.log(`AI Debug: ${aiPlayer.username} decided to END TURN (no other actions possible/chosen).`);
          // Cannot move, cannot suggest, and not accusing - End Turn
          performAiEndTurnRef.current(aiPlayer);
        }
@@ -434,17 +445,15 @@ const Game = () => {
     }
     
     // Update the player position locally
-    const updatedPlayers = gameState.players.map(player => {
-      if (player.userId === currentUser.id) {
-        return { ...player, position: destination };
-      }
-      return player;
+    setGameState(prevState => {
+        const updatedPlayers = prevState.players.map(player => {
+            if (player.userId === currentUser.id) {
+                return { ...player, position: destination };
+            }
+            return player;
+        });
+        return { ...prevState, players: updatedPlayers };
     });
-    
-    setGameState(prev => ({
-      ...prev,
-      players: updatedPlayers
-    }));
     
     // Add to game log using functional update
     const newEntry = {
@@ -469,9 +478,9 @@ const Game = () => {
       timestamp: new Date()
     };
     
-    setGameState(prev => ({
-      ...prev,
-      suggestions: [...(prev.suggestions || []), newSuggestion]
+    setGameState(prevState => ({
+      ...prevState,
+      suggestions: [...(prevState.suggestions || []), newSuggestion]
     }));
     
     // Update game log using functional update
@@ -505,9 +514,9 @@ const Game = () => {
       timestamp: new Date()
     };
     
-    setGameState(prev => ({
-      ...prev,
-      accusations: [...(prev.accusations || []), newAccusation]
+    setGameState(prevState => ({
+      ...prevState,
+      accusations: [...(prevState.accusations || []), newAccusation]
     }));
     
     // Update game log using functional update
@@ -560,8 +569,8 @@ const Game = () => {
         p.userId === currentUser.id ? { ...p, turnCount: p.turnCount + 1 } : p
     );
 
-    setGameState(prev => ({
-      ...prev,
+    setGameState(prevState => ({
+      ...prevState,
       players: updatedPlayers, // Update players state
       currentTurn: nextPlayerId,
       // Reset available actions for the next player (mockup simplification)
