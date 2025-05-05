@@ -61,8 +61,6 @@
   flex-grow: 1;
   overflow-y: auto;
   min-height: 150px;
-  border: 1px solid #ccc;
-  background-color: #f8f8f8;
   margin-top: 10px;
 }
 
