@@ -236,7 +236,9 @@ describe('AuthContext', () => {
       expect(localStorage.removeItem).toHaveBeenCalledWith('user');
       expect(localStorage.removeItem).toHaveBeenCalledWith('token');
       
-      expect(mockNavigate).toHaveBeenCalledWith('/login');
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith('/login');
+      });
     });
   });
 }); 

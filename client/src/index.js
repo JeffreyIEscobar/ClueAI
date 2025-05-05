@@ -10,7 +10,7 @@ import App from './App';
 import './styles/index.css';
 
 // Configure React Router future flags
-window.__reactRouterFutureFlags = {
+window.__reactRouterFuture = {
   v7_startTransition: true,
   v7_relativeSplatPath: true
 };
