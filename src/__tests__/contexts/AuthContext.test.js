@@ -35,15 +35,28 @@ beforeEach(() => {
   jest.clearAllMocks();
   localStorage.clear();
   api.post.mockReset();
+  Object.defineProperty(window, 'localStorage', {
+    value: {
+      getItem: jest.fn(() => null),
+      setItem: jest.fn(),
+      removeItem: jest.fn(),
+      clear: jest.fn(),
+    },
+    writable: true,
+  });
 });
 
 describe('AuthContext', () => {
   describe('Initial Load', () => {
-    test('starts with loading=false and checks localStorage', async () => {
+    test('initially loading becomes false, checks localStorage, reflects stored data', async () => {
       const mockUser = { id: 'user123', username: 'StoredUser' };
       const mockToken = 'storedToken123';
-      localStorage.setItem('user', JSON.stringify(mockUser));
-      localStorage.setItem('token', mockToken);
+      window.localStorage.getItem
+        .mockImplementation(key => {
+          if (key === 'user') return JSON.stringify(mockUser);
+          if (key === 'token') return mockToken;
+          return null;
+        });
 
       render(
         <MemoryRouter>
@@ -60,7 +73,9 @@ describe('AuthContext', () => {
       expect(localStorage.getItem).toHaveBeenCalledWith('token');
     });
 
-    test('starts with loading=false and no user if localStorage is empty', async () => {
+    test('initially loading becomes false, no user/token if localStorage is empty', async () => {
+       window.localStorage.getItem.mockReturnValue(null);
+
        render(
         <MemoryRouter>
           <AuthProvider>
@@ -76,9 +91,9 @@ describe('AuthContext', () => {
   });
 
   describe('Registration', () => {
-    test('successful registration calls api and returns success', async () => {
+    test('successful registration calls api', async () => {
       api.post.mockResolvedValue({ data: { message: 'User registered' } });
-
+      const user = userEvent.setup();
       render(
         <MemoryRouter>
           <AuthProvider>
@@ -88,7 +103,7 @@ describe('AuthContext', () => {
       );
 
       await act(async () => {
-        await userEvent.click(screen.getByTestId('register-btn'));
+        await user.click(screen.getByTestId('register-btn'));
       });
 
       expect(api.post).toHaveBeenCalledWith('/auth/register', {
@@ -98,12 +113,12 @@ describe('AuthContext', () => {
       });
     });
 
-    test('failed registration returns error', async () => {
+    test('failed registration calls api', async () => {
       const errorMessage = 'Registration Failed';
       api.post.mockRejectedValue({
         response: { data: { message: errorMessage } }
       });
-
+      const user = userEvent.setup();
       render(
         <MemoryRouter>
           <AuthProvider>
@@ -113,7 +128,7 @@ describe('AuthContext', () => {
       );
         
       await act(async () => {
-         await userEvent.click(screen.getByTestId('register-btn'));
+         await user.click(screen.getByTestId('register-btn'));
       });
        
       expect(api.post).toHaveBeenCalledWith('/auth/register', {
@@ -131,7 +146,7 @@ describe('AuthContext', () => {
       api.post.mockResolvedValue({ 
         data: { userId: mockUser.id, username: mockUser.username, token: mockToken }
       });
-
+      const user = userEvent.setup();
       render(
         <MemoryRouter>
           <AuthProvider>
@@ -141,11 +156,13 @@ describe('AuthContext', () => {
       );
 
       await act(async () => {
-        await userEvent.click(screen.getByTestId('login-btn'));
+        await user.click(screen.getByTestId('login-btn'));
       });
 
-      expect(screen.getByTestId('user').textContent).toBe(JSON.stringify(mockUser));
-      expect(screen.getByTestId('token').textContent).toBe(mockToken);
+      await waitFor(() => {
+        expect(screen.getByTestId('user').textContent).toBe(JSON.stringify(mockUser));
+        expect(screen.getByTestId('token').textContent).toBe(mockToken);
+      });
       
       expect(localStorage.setItem).toHaveBeenCalledWith('user', JSON.stringify(mockUser));
       expect(localStorage.setItem).toHaveBeenCalledWith('token', mockToken);
@@ -160,8 +177,8 @@ describe('AuthContext', () => {
        api.post.mockRejectedValue({ 
          response: { data: { message: errorMessage } } 
        });
-
-      render(
+       const user = userEvent.setup();
+       render(
         <MemoryRouter>
           <AuthProvider>
             <TestComponent />
@@ -173,7 +190,7 @@ describe('AuthContext', () => {
       expect(screen.getByTestId('token').textContent).toBe('no-token');
 
       await act(async () => {
-        await userEvent.click(screen.getByTestId('login-btn'));
+        await user.click(screen.getByTestId('login-btn'));
       });
 
       expect(screen.getByTestId('user').textContent).toBe('null');
@@ -190,9 +207,13 @@ describe('AuthContext', () => {
     test('logout clears context, localStorage and navigates', async () => {
       const mockUser = { id: 'user123', username: 'testuser' };
       const mockToken = 'testToken123';
-      localStorage.setItem('user', JSON.stringify(mockUser));
-      localStorage.setItem('token', mockToken);
-
+      window.localStorage.getItem
+        .mockImplementation(key => {
+          if (key === 'user') return JSON.stringify(mockUser);
+          if (key === 'token') return mockToken;
+          return null;
+        });
+      const user = userEvent.setup();
       render(
         <MemoryRouter>
           <AuthProvider>
@@ -204,11 +225,13 @@ describe('AuthContext', () => {
       await waitFor(() => expect(screen.getByTestId('user').textContent).toBe(JSON.stringify(mockUser)));
 
       await act(async () => {
-         userEvent.click(screen.getByTestId('logout-btn'));
+         await user.click(screen.getByTestId('logout-btn'));
       });
 
-      expect(screen.getByTestId('user').textContent).toBe('null');
-      expect(screen.getByTestId('token').textContent).toBe('no-token');
+      await waitFor(() => {
+        expect(screen.getByTestId('user').textContent).toBe('null');
+        expect(screen.getByTestId('token').textContent).toBe('no-token');
+      });
       
       expect(localStorage.removeItem).toHaveBeenCalledWith('user');
       expect(localStorage.removeItem).toHaveBeenCalledWith('token');
