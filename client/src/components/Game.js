@@ -325,8 +325,8 @@ const Game = () => {
     if (aiTurnActive) return; // Prevent overlapping calls
 
     const aiPlayer = gameState.players.find(p => p.userId === gameState.currentTurn);
-    // console.log(`AI Action: performAiTurn triggered for ${aiPlayer?.username} (ID: ${aiPlayer?.userId})`);
-    console.log(`Connected User: performAiTurn triggered for ${aiPlayer?.username} (ID: ${aiPlayer?.userId})`);
+    // console.log(`Connected User: performAiTurn triggered for ${aiPlayer?.username} (ID: ${aiPlayer?.userId})`);
+    console.log(`performedTurn: triggered for ${aiPlayer?.username} (ID: ${aiPlayer?.userId})`);
 
     if (!aiPlayer || aiPlayer.userId === currentUser.id) {
       // console.log(`AI Action: performAiTurn exiting - not AI turn or player not found.`);
@@ -622,6 +622,7 @@ const Game = () => {
 
         <main className="game-main">
           <GameBoard 
+            key={JSON.stringify(gameState.players.map(p => p.position))}
             rooms={gameState.board.rooms}
             hallways={gameState.board.hallways}
             players={gameState.players}
