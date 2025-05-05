@@ -307,25 +307,30 @@ const Game = () => {
     const thinkingTime = Math.random() * 5000 + 10000; // 10s to 15s delay
     setTimeout(() => {
        // Decide action
-       // Simple random choice for now: 60% move, 20% suggest, 10% accuse, 10% end turn immediately
-       const actionRoll = Math.random();
-       const canSuggest = gameState.board.rooms.some(r => r.id === aiPlayer.position);
+       // --- REMOVE RANDOM ACTION LOGIC ---
+       // const actionRoll = Math.random();
+       // const canSuggest = gameState.board.rooms.some(r => r.id === aiPlayer.position);
+       //
+       // if (actionRoll < 0.6) { // Try Move
+       //   performAiMoveRef.current(aiPlayer);
+       // } else if (actionRoll < 0.8 && canSuggest) { // Try Suggest (only if in room)
+       //   performAiSuggestionRef.current(aiPlayer);
+       // } else if (actionRoll < 0.9) { // Try Accuse
+       //   performAiAccusationRef.current(aiPlayer);
+       // } else { // End Turn immediately
+       //   performAiEndTurnRef.current(aiPlayer);
+       // }
 
-       if (actionRoll < 0.6) { // Try Move
-         performAiMoveRef.current(aiPlayer);
-       } else if (actionRoll < 0.8 && canSuggest) { // Try Suggest (only if in room)
-         performAiSuggestionRef.current(aiPlayer);
-       } else if (actionRoll < 0.9) { // Try Accuse
-         performAiAccusationRef.current(aiPlayer);
-       } else { // End Turn immediately
-         performAiEndTurnRef.current(aiPlayer);
-       }
-       // Note: The chosen action function will now call performAiEndTurnRef itself.
+       // --- ALWAYS TRY TO MOVE --- 
+       // The performAiMoveRef function will handle ending the turn if no move is possible.
+       performAiMoveRef.current(aiPlayer);
 
     }, thinkingTime);
 
   // Rerun when currentTurn changes, but only if it's an AI's turn
-  }, [aiTurnActive, currentUser.id, gameState.currentTurn, gameState.players, gameState.board.rooms]);
+  // }, [aiTurnActive, currentUser.id, gameState.currentTurn, gameState.players, gameState.board.rooms]);
+  // Simplified dependencies as board.rooms is not directly used here anymore for decision
+  }, [aiTurnActive, currentUser.id, gameState.currentTurn, gameState.players]);
 
 
   // Effect to trigger AI turn
