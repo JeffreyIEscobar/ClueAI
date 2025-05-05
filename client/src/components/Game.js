@@ -293,31 +293,38 @@ const Game = () => {
       }
       const nextPlayerId = playerIds[nextIndex];
 
-      // Increment turn count for the player whose turn just ended
-      const finishedPlayerIndex = gameState.players.findIndex(p => p.userId === aiPlayer.userId);
-      const updatedPlayers = [...gameState.players];
+      const currentPlayers = gameState.players;
+      const finishedPlayerIndex = currentPlayers.findIndex(p => p.userId === aiPlayer.userId);
+      let updatedPlayers = [...currentPlayers]; // Create a mutable copy
       if (finishedPlayerIndex !== -1) {
+          // Increment turn count first
           updatedPlayers[finishedPlayerIndex] = {
               ...updatedPlayers[finishedPlayerIndex],
               turnCount: updatedPlayers[finishedPlayerIndex].turnCount + 1
           };
-      }
 
-      setGameState(prev => ({
-        ...prev,
-        players: updatedPlayers, // Update players with incremented turn count
+          // <<< DIAGNOSTIC: Force Player 2 to Library (within the if block) >>>
+          if (aiPlayer.userId === 'user-2') {
+              console.log("DIAGNOSTIC: Forcing Player 2 position to 'library'");
+              // Make sure to update based on the already updated player object
+              updatedPlayers[finishedPlayerIndex] = {
+                  ...updatedPlayers[finishedPlayerIndex], // Keep the incremented turnCount
+                  position: 'library'
+              };
+          }
+      } // End of if (finishedPlayerIndex !== -1)
+
+      console.log("DIAGNOSTIC: Final updatedPlayers before setting state in endTurn:", updatedPlayers);
+
+      setGameState(prevState => ({
+        ...prevState,
+        players: updatedPlayers, // Use the potentially modified array
         currentTurn: nextPlayerId,
-        // Reset available actions for the next player (mockup simplification)
-        availableActions: {
-          canMove: true,
-          canSuggest: true,
-          canAccuse: true,
-          canEndTurn: true
-        }
+        availableActions: { canMove: true, canSuggest: true, canAccuse: true, canEndTurn: true }
       }));
-      setThinking(false); // Stop thinking visual
-      setAiTurnActive(false); // Allow next AI turn trigger if applicable
-    }, 500); // Short delay
+      setThinking(false);
+      setAiTurnActive(false);
+    }, 500);
   };
 
   // New function to handle the complete AI turn sequence
@@ -621,8 +628,8 @@ const Game = () => {
         </aside>
 
         <main className="game-main">
-          <GameBoard 
-            key={JSON.stringify(gameState.players.map(p => p.position))}
+          <GameBoard
+            key={gameState.currentTurn}
             rooms={gameState.board.rooms}
             hallways={gameState.board.hallways}
             players={gameState.players}
