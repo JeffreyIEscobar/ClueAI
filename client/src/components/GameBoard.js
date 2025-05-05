@@ -86,6 +86,13 @@ const GameBoard = ({ rooms, hallways, players, currentUserId, onRoomClick, curre
 
     // Calculate base absolute position style
     const coords = positionToCoords[player.position];
+
+    // <<< Safeguard >>>
+    if (!coords) {
+        console.error(`GameBoard Error: Cannot find coordinates for position '${player.position}' for player ${player.username}. Hiding token.`);
+        return null; // Don't render the token if coords are invalid
+    }
+
     const cellWidthPercent = 100 / 5;
     const cellHeightPercent = 100 / 5;
     // Base position calculation (center of the cell)

@@ -293,8 +293,20 @@ const Game = () => {
           }
           const nextPlayerId = playerIds[nextIndex];
 
+          // Restore player array update
+          const finishedPlayerIndex = currentPlayers.findIndex(p => p.userId === aiPlayer.userId);
+          let updatedPlayers = [...currentPlayers];
+          if (finishedPlayerIndex !== -1) {
+              updatedPlayers[finishedPlayerIndex] = {
+                  ...updatedPlayers[finishedPlayerIndex],
+                  turnCount: updatedPlayers[finishedPlayerIndex].turnCount + 1
+              };
+          }
+          // console.log("DIAGNOSTIC: Final updatedPlayers before setting state in endTurn:", updatedPlayers); // Can remove this now
+
           return {
               ...prevState,
+              players: updatedPlayers,
               currentTurn: nextPlayerId,
               availableActions: { canMove: true, canSuggest: true, canAccuse: true, canEndTurn: true }
           };
