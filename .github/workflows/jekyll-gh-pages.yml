@@ -52,7 +52,7 @@ jobs:
           
       # Run tests explicitly but allow failure, skipping the problematic suite
       - name: Run client tests (allow failure, skip AuthContext)
-        run: cd client && npm test -- --testPathIgnorePatterns=AuthContext.test.js
+        run: cd client && npm test -- --testPathIgnorePatterns="AuthContext.test.js"
         continue-on-error: true 
 
       # Build the app, ensuring CI=false is set
