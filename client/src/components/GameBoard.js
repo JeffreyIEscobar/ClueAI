@@ -2,49 +2,17 @@ import React from 'react';
 import '../styles/GameBoard.css';
 
 // Mapping from position ID to grid coordinates (row, col) - 0-indexed
-const positionToCoords = {
-  'study': { row: 0, col: 0 }, 'study-hall': { row: 0, col: 1 }, 'hall': { row: 0, col: 2 }, 'hall-lounge': { row: 0, col: 3 }, 'lounge': { row: 0, col: 4 },
-  'study-library': { row: 1, col: 0 }, 'hall-billiard': { row: 1, col: 2 }, 'lounge-dining': { row: 1, col: 4 },
-  'library': { row: 2, col: 0 }, 'library-billiard': { row: 2, col: 1 }, 'billiard': { row: 2, col: 2 }, 'billiard-dining': { row: 2, col: 3 }, 'dining': { row: 2, col: 4 },
-  'library-conservatory': { row: 3, col: 0 }, 'billiard-ballroom': { row: 3, col: 2 }, 'dining-kitchen': { row: 3, col: 4 },
-  'conservatory': { row: 4, col: 0 }, 'conservatory-ballroom': { row: 4, col: 1 }, 'ballroom': { row: 4, col: 2 }, 'ballroom-kitchen': { row: 4, col: 3 }, 'kitchen': { row: 4, col: 4 },
-  // Add starting positions if needed, map to approximate grid cells or handle separately
-};
-
-// Calculate top/left percentages based on grid coords
-const getPositionStyle = (position) => {
-  const coords = positionToCoords[position];
-  if (!coords) return { display: 'none' }; // Hide if position unknown
-
-  const cellWidthPercent = 100 / 5;
-  const cellHeightPercent = 100 / 5;
-
-  const left = `${coords.col * cellWidthPercent}%`;
-  const top = `${coords.row * cellHeightPercent}%`;
-
-  // Center the token within the cell (adjust based on token size)
-  // Assuming token width/height is roughly 10% of cell size for centering calc
-  const transform = `translate(calc(${left} + ${cellWidthPercent/2}% - 10px), calc(${top} + ${cellHeightPercent/2}% - 10px))`; // Adjust 10px based on half token size
-
-  // return { top, left };
-  return { transform: `translate(${left}, ${top})`, width: `${cellWidthPercent}%`, height: `${cellHeightPercent}%` }; // Use transform for better performance? No, just use top/left for container
-};
+// const positionToCoords = { ... };
+// const getPositionStyle = (position) => { ... };
 
 const GameBoard = ({ rooms, hallways, players, currentUserId, onRoomClick, currentTurn }) => {
 
-  // <<< Log received props >>>
   console.log("GameBoard Render: Received players prop:", players);
   console.log("GameBoard Render: Current Turn:", currentTurn);
 
   // Get player by position
-  const getPlayerInPosition = (position) => {
-    const player = players.find(player => player.position === position);
-    // <<< Log finding player >>>
-    if (player) {
-        // Only log if a player IS found for this position during render
-        console.log(`GameBoard Render: Found ${player.username} at position ${position}`);
-    }
-    return player;
+  const getPlayersInPosition = (position) => {
+    return players.filter(player => player.position === position);
   };
   
   // Handle clicking on a space (room or hallway)
@@ -75,38 +43,20 @@ const GameBoard = ({ rooms, hallways, players, currentUserId, onRoomClick, curre
     return colorMap[character] || '#888888';
   };
 
-  // Render player token (will be positioned absolutely)
-  const renderPlayerToken = (player) => { // <<< Removed indexInCell, totalInCell temporarily >>>
-    if (!player || !positionToCoords[player.position]) return null;
-
-    // <<< Safeguard >>>
-    const coords = positionToCoords[player.position];
-    if (!coords) {
-        console.error(`GameBoard Error: Cannot find coordinates for position '${player.position}' for player ${player.username}. Hiding token.`);
-        return null;
-    }
-
+  // Render player token (No longer absolute)
+  const renderPlayerToken = (player) => {
     const isCurrentPlayer = player.userId === currentUserId;
     const isPlayerTurn = player.userId === currentTurn;
     const color = getCharacterColor(player.character);
     const textColor = ['#FFFFFF', '#E6C700'].includes(color) ? '#000000' : '#FFFFFF';
 
-    // Calculate absolute position style (Simplified)
-    const cellWidthPercent = 100 / 5;
-    const cellHeightPercent = 100 / 5;
-    // Direct centering calculation (adjust 11px based on half token size: 20px width + 2px border / 2 = 11px)
-    const left = `calc(${coords.col * cellWidthPercent}% + ${cellWidthPercent / 2}% - 11px)`;
-    const top = `calc(${coords.row * cellHeightPercent}% + ${cellHeightPercent / 2}% - 11px)`;
-
-    // <<< Log finding player >>>
-    console.log(`GameBoard Render: Rendering ${player.username} at calculated top: ${top}, left: ${left} (Position: ${player.position})`);
+    console.log(`GameBoard Render: Rendering ${player.username} at position ${player.position}`);
 
     return (
       <div
         key={player.userId}
         className={`player-token ${isCurrentPlayer ? 'current-player' : ''} ${isPlayerTurn ? 'active-turn' : ''}`}
-        // Apply top/left directly, remove transform for now
-        style={{ backgroundColor: color, color: textColor, position: 'absolute', top, left }}
+        style={{ backgroundColor: color, color: textColor }}
         title={player.character}
       >
         {getCharacterDisplay(player.character)}
@@ -114,58 +64,102 @@ const GameBoard = ({ rooms, hallways, players, currentUserId, onRoomClick, curre
     );
   };
 
+  // Helper to render tokens for a given position
+  const renderTokensForPosition = (position) => {
+      const playersInPos = getPlayersInPosition(position);
+      return playersInPos.map(player => renderPlayerToken(player));
+  };
+
   return (
     <div className="game-board">
       {/* Render the static grid structure */}
       <div className="board-grid">
-        {/* Render all 25 grid cells (rooms, hallways, empty) without tokens initially */}
-        {Array.from({ length: 5 }).map((_, row) =>
-          Array.from({ length: 5 }).map((_, col) => {
-            const positionId = Object.keys(positionToCoords).find(
-              key => positionToCoords[key].row === row && positionToCoords[key].col === col
-            );
-            const roomData = rooms.find(r => r.id === positionId);
-            const hallwayData = hallways.find(h => h.id === positionId);
-            const isEmpty = !roomData && !hallwayData && positionId;
+        {/* Rebuild grid rendering to include tokens inside cells */}
+        {/* Top Row */}
+        <div className="room board-cell" onClick={() => handleSpaceClick('study')}>
+          <div className="room-name">Study</div>
+          {renderTokensForPosition('study')}
+        </div>
+        <div className="hallway horizontal board-cell" onClick={() => handleSpaceClick('study-hall')}>
+           {renderTokensForPosition('study-hall')}
+        </div>
+        <div className="room board-cell" onClick={() => handleSpaceClick('hall')}>
+          <div className="room-name">Hall</div>
+           {renderTokensForPosition('hall')}
+        </div>
+        <div className="hallway horizontal board-cell" onClick={() => handleSpaceClick('hall-lounge')}>
+           {renderTokensForPosition('hall-lounge')}
+        </div>
+        <div className="room board-cell" onClick={() => handleSpaceClick('lounge')}>
+          <div className="room-name">Lounge</div>
+           {renderTokensForPosition('lounge')}
+        </div>
 
-            let cellType = 'empty';
-            let name = '';
-            let clickHandler = () => {};
+        {/* Vertical Hallways 1 */}
+        <div className="hallway vertical board-cell" onClick={() => handleSpaceClick('study-library')}>
+           {renderTokensForPosition('study-library')}
+        </div>
+        <div className="empty board-cell"></div>
+        <div className="hallway vertical board-cell" onClick={() => handleSpaceClick('hall-billiard')}>
+           {renderTokensForPosition('hall-billiard')}
+        </div>
+        <div className="empty board-cell"></div>
+        <div className="hallway vertical board-cell" onClick={() => handleSpaceClick('lounge-dining')}>
+           {renderTokensForPosition('lounge-dining')}
+        </div>
 
-            if (roomData) {
-              cellType = 'room';
-              name = roomData.name;
-              clickHandler = () => handleSpaceClick(roomData.id);
-            } else if (hallwayData) {
-              cellType = 'hallway';
-              // Determine orientation based on name convention (e.g., study-hall vs study-library)
-              const parts = hallwayData.id.split('-');
-              const pos1 = positionToCoords[parts[0]];
-              const pos2 = positionToCoords[parts[1]];
-              if (pos1 && pos2) {
-                  cellType += (pos1.row === pos2.row) ? ' horizontal' : ' vertical';
-              }
-              clickHandler = () => handleSpaceClick(hallwayData.id);
-            }
+        {/* Middle Row */}
+        <div className="room board-cell" onClick={() => handleSpaceClick('library')}>
+          <div className="room-name">Library</div>
+           {renderTokensForPosition('library')}
+        </div>
+        <div className="hallway horizontal board-cell" onClick={() => handleSpaceClick('library-billiard')}>
+           {renderTokensForPosition('library-billiard')}
+        </div>
+        <div className="room board-cell" onClick={() => handleSpaceClick('billiard')}>
+          <div className="room-name">Billiard Room</div>
+           {renderTokensForPosition('billiard')}
+        </div>
+        <div className="hallway horizontal board-cell" onClick={() => handleSpaceClick('billiard-dining')}>
+           {renderTokensForPosition('billiard-dining')}
+        </div>
+        <div className="room board-cell" onClick={() => handleSpaceClick('dining')}>
+          <div className="room-name">Dining Room</div>
+           {renderTokensForPosition('dining')}
+        </div>
 
-            // Key needs to be unique for each cell
-            const cellKey = positionId || `empty-${row}-${col}`; 
+        {/* Vertical Hallways 2 */}
+        <div className="hallway vertical board-cell" onClick={() => handleSpaceClick('library-conservatory')}>
+           {renderTokensForPosition('library-conservatory')}
+        </div>
+        <div className="empty board-cell"></div>
+        <div className="hallway vertical board-cell" onClick={() => handleSpaceClick('billiard-ballroom')}>
+           {renderTokensForPosition('billiard-ballroom')}
+        </div>
+        <div className="empty board-cell"></div>
+        <div className="hallway vertical board-cell" onClick={() => handleSpaceClick('dining-kitchen')}>
+           {renderTokensForPosition('dining-kitchen')}
+        </div>
 
-            return (
-              <div key={cellKey} className={`${cellType} board-cell`} onClick={clickHandler}>
-                {name && <div className="room-name">{name}</div>}
-                {/* Token is NOT rendered here anymore */}
-              </div>
-            );
-          })
-        )}
-      </div>
-
-      {/* Render player tokens absolutely positioned over the grid (Simplified) */}
-      <div className="player-tokens-layer">
-        {/* {Object.keys(playersByPosition).map(position => { ... })} */}
-        {/* Render directly from players array */}
-        {players.map(player => renderPlayerToken(player))}
+        {/* Bottom Row */}
+        <div className="room board-cell" onClick={() => handleSpaceClick('conservatory')}>
+          <div className="room-name">Conservatory</div>
+           {renderTokensForPosition('conservatory')}
+        </div>
+        <div className="hallway horizontal board-cell" onClick={() => handleSpaceClick('conservatory-ballroom')}>
+           {renderTokensForPosition('conservatory-ballroom')}
+        </div>
+        <div className="room board-cell" onClick={() => handleSpaceClick('ballroom')}>
+          <div className="room-name">Ballroom</div>
+           {renderTokensForPosition('ballroom')}
+        </div>
+        <div className="hallway horizontal board-cell" onClick={() => handleSpaceClick('ballroom-kitchen')}>
+           {renderTokensForPosition('ballroom-kitchen')}
+        </div>
+        <div className="room board-cell" onClick={() => handleSpaceClick('kitchen')}>
+          <div className="room-name">Kitchen</div>
+           {renderTokensForPosition('kitchen')}
+        </div>
       </div>
 
       {/* Character Starting Positions */}
