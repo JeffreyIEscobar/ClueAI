@@ -373,23 +373,25 @@ const Game = () => {
        const canMove = validDestinations.length > 0;
        const canSuggest = gameState.board.rooms.some(r => r.id === aiPlayer.position);
        const accuseRoll = Math.random(); // Roll for accusation chance
+       const suggestAllowed = canSuggest && aiPlayer.turnCount > 0;
+       const accuseAllowed = aiPlayer.turnCount > 1 && accuseRoll < 0.2;
 
-       // <<< Add detailed logging before decision >>>
-       console.log(`Connected User: ${aiPlayer.username} Turn ${aiPlayer.turnCount + 1} - Checking actions: Can Move=${canMove}, Can Suggest=${canSuggest} (needs turn > 1), Can Accuse=${aiPlayer.turnCount > 1} (needs turn > 2)`);
+       // Log conditions before decision
+       console.log(`Connected User: ${aiPlayer.username} Turn ${aiPlayer.turnCount + 1} - Checking actions: Can Move=${canMove}, Suggest Allowed=${suggestAllowed}, Accuse Allowed=${accuseAllowed}`);
 
        // --- Decision Logic --- 
        if (canMove) {
          console.log(`Connected User: ${aiPlayer.username} decided to MOVE.`);
          performAiMoveRef.current(aiPlayer);
-       } else if (canSuggest && aiPlayer.turnCount > 0) { // Suggest possible after turn 1 (if cannot move)
+       } else if (suggestAllowed) { // If cannot move, try suggesting (if allowed)
          console.log(`Connected User: ${aiPlayer.username} decided to SUGGEST (Turn: ${aiPlayer.turnCount + 1}).`);
          performAiSuggestionRef.current(aiPlayer);
-       } else if (aiPlayer.turnCount > 1 && accuseRoll < 0.2) { // Accuse possible after turn 2 (if cannot move/suggest, 20% chance)
+       } else if (accuseAllowed) { // If cannot move/suggest, try accusing (if allowed)
          console.log(`Connected User: ${aiPlayer.username} decided to ACCUSE (Turn: ${aiPlayer.turnCount + 1}).`);
          performAiAccusationRef.current(aiPlayer);
        } else {
-         // Log the reason for ending turn more clearly
-         console.log(`Connected User: ${aiPlayer.username} decided to END TURN (Cannot Move; Suggest allowed=${canSuggest && aiPlayer.turnCount > 0}; Accuse allowed=${aiPlayer.turnCount > 1 && accuseRoll < 0.2}).`);
+         // If none of the above, end turn
+         console.log(`Connected User: ${aiPlayer.username} decided to END TURN (Cannot Move; Suggest Allowed=${suggestAllowed}; Accuse Allowed=${accuseAllowed}).`);
          performAiEndTurnRef.current(aiPlayer);
        }
 
