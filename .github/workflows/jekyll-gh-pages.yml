@@ -18,33 +18,58 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout specific commit
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }} # Explicitly checkout the triggering commit SHA
+          
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: client/package-lock.json
-      - name: Clear npm cache
-        run: npm cache clean --force
-      - name: Install root dependencies (if any, adjust if not needed)
-        run: npm install
-      - name: Install client dependencies
-        run: cd client && npm install
+          # Removing cache settings temporarily to eliminate them as a factor
+          # cache: 'npm' 
+          # cache-dependency-path: client/package-lock.json 
+          
+      - name: Force clean install
+        run: |
+          rm -rf node_modules client/node_modules
+          npm cache clean --force
+          npm install
+          cd client && npm install
+          cd .. # Go back to root for next step
+          
+      # Verify the critical lines in the test file ARE fixed
+      - name: Verify AuthContext test file content
+        run: |
+          echo "Verifying lines in src/__tests__/contexts/AuthContext.test.js:"
+          echo "--- Start Line 76 Area ---"
+          sed -n '74,79p' src/__tests__/contexts/AuthContext.test.js || echo "File/Lines not found"
+          echo "--- End Line 76 Area ---"
+          echo "--- Start Line 147 Area ---"
+          sed -n '145,150p' src/__tests__/contexts/AuthContext.test.js || echo "File/Lines not found"
+          echo "--- End Line 147 Area ---"
+          
+      # Run tests explicitly but allow failure
       - name: Run client tests (allow failure)
         run: cd client && npm test
-        continue-on-error: true
+        continue-on-error: true 
+
+      # Build the app, ensuring CI=false is set
       - name: Build React app
         run: cd client && npm run build
         env:
-          CI: false
+          CI: false 
+          
+      # Prepare for deployment
       - name: Create redirects for GitHub Pages
         run: |
           cp client/build/index.html client/build/404.html
-          echo "/* /index.html 200" > client/build/_redirects
+          echo "/* /index.html 200" > client/build/_redirects 
+          
       - name: Setup Pages
         uses: actions/configure-pages@v5
+        
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
