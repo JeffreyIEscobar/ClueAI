@@ -15,15 +15,15 @@ const App = () => {
 
   return (
     <div className="app">
-      <SocketProvider socket={socket}>
-        <GameProvider>
-          <Routes>
+        <SocketProvider socket={socket}>
+          <GameProvider>
+            <Routes>
             <Route path="/" element={<Game />} />
             <Route path="/game" element={<Game />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </GameProvider>
-      </SocketProvider>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </GameProvider>
+        </SocketProvider>
     </div>
   );
 };

@@ -46,22 +46,11 @@
 }
 
 .game-sidebar {
+  width: 250px;
   display: flex;
   flex-direction: column;
-  padding-right: 10px;
-  max-height: calc(100vh - 100px);
-  overflow: hidden;
-}
-
-.game-sidebar .player-info {
+  gap: 0.5rem;
   flex-shrink: 0;
-}
-
-.game-sidebar .game-log-container {
-  flex-grow: 1;
-  overflow-y: auto;
-  min-height: 150px;
-  margin-top: 10px;
 }
 
 .game-main {
