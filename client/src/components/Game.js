@@ -304,7 +304,7 @@ const Game = () => {
 
 
     // Simulate thinking delay
-    const thinkingTime = Math.random() * 1500 + 500; // 0.5s to 2s delay
+    const thinkingTime = Math.random() * 3000 + 5000; // 5s to 8s delay
     setTimeout(() => {
        // Decide action
        // Simple random choice for now: 60% move, 20% suggest, 10% accuse, 10% end turn immediately
