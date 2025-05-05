@@ -75,72 +75,44 @@ const GameBoard = ({ rooms, hallways, players, currentUserId, onRoomClick, curre
     return colorMap[character] || '#888888';
   };
 
-  // Render player token (will be positioned absolutely with offset for multiples)
-  const renderPlayerToken = (player, indexInCell, totalInCell) => {
-    if (!player || !positionToCoords[player.position]) return null; // Don't render if position unknown
+  // Render player token (will be positioned absolutely)
+  const renderPlayerToken = (player) => { // <<< Removed indexInCell, totalInCell temporarily >>>
+    if (!player || !positionToCoords[player.position]) return null;
+
+    // <<< Safeguard >>>
+    const coords = positionToCoords[player.position];
+    if (!coords) {
+        console.error(`GameBoard Error: Cannot find coordinates for position '${player.position}' for player ${player.username}. Hiding token.`);
+        return null;
+    }
 
     const isCurrentPlayer = player.userId === currentUserId;
     const isPlayerTurn = player.userId === currentTurn;
     const color = getCharacterColor(player.character);
     const textColor = ['#FFFFFF', '#E6C700'].includes(color) ? '#000000' : '#FFFFFF';
 
-    // Calculate base absolute position style
-    const coords = positionToCoords[player.position];
-
-    // <<< Safeguard >>>
-    if (!coords) {
-        console.error(`GameBoard Error: Cannot find coordinates for position '${player.position}' for player ${player.username}. Hiding token.`);
-        return null; // Don't render the token if coords are invalid
-    }
-
+    // Calculate absolute position style (Simplified)
     const cellWidthPercent = 100 / 5;
     const cellHeightPercent = 100 / 5;
-    // Base position calculation (center of the cell)
-    const baseLeft = `calc(${coords.col * cellWidthPercent}% + ${cellWidthPercent / 2}% - 11px)`;
-    const baseTop = `calc(${coords.row * cellHeightPercent}% + ${cellHeightPercent / 2}% - 11px)`;
+    // Direct centering calculation (adjust 11px based on half token size: 20px width + 2px border / 2 = 11px)
+    const left = `calc(${coords.col * cellWidthPercent}% + ${cellWidthPercent / 2}% - 11px)`;
+    const top = `calc(${coords.row * cellHeightPercent}% + ${cellHeightPercent / 2}% - 11px)`;
 
-    // Calculate offset based on index within the cell
-    let offsetLeft = 0;
-    let offsetTop = 0;
-    const offsetAmount = 5; // Pixels to offset
-
-    if (totalInCell > 1) {
-        // Simple offsetting: alternate left/right or use a small grid pattern
-        // Example: Alternate left/right
-        offsetLeft = (indexInCell % 2 === 0) ? -offsetAmount : offsetAmount;
-        // Example: Could also do vertical offset based on pairs
-        // offsetTop = Math.floor(indexInCell / 2) * offsetAmount;
-    }
-
-    // Apply offset using transform for potentially smoother animation
-    const finalTransform = `translate(calc(${baseLeft} + ${offsetLeft}px), calc(${baseTop} + ${offsetTop}px))`;
-
-    console.log(`GameBoard Render: Rendering ${player.username} at ${player.position} (Index: ${indexInCell}/${totalInCell}) -> Transform: ${finalTransform}`);
+    // <<< Log finding player >>>
+    console.log(`GameBoard Render: Rendering ${player.username} at calculated top: ${top}, left: ${left} (Position: ${player.position})`);
 
     return (
       <div
-        key={player.userId} // Key for React list rendering
+        key={player.userId}
         className={`player-token ${isCurrentPlayer ? 'current-player' : ''} ${isPlayerTurn ? 'active-turn' : ''}`}
-        // Apply transform instead of top/left directly
-        style={{ backgroundColor: color, color: textColor, position: 'absolute', transform: finalTransform }}
+        // Apply top/left directly, remove transform for now
+        style={{ backgroundColor: color, color: textColor, position: 'absolute', top, left }}
         title={player.character}
       >
         {getCharacterDisplay(player.character)}
       </div>
     );
   };
-
-  // Group players by their current position
-  const playersByPosition = players.reduce((acc, player) => {
-    const pos = player.position;
-    if (positionToCoords[pos]) { // Only include players with valid board positions
-        if (!acc[pos]) {
-            acc[pos] = [];
-        }
-        acc[pos].push(player);
-    }
-    return acc;
-  }, {});
 
   return (
     <div className="game-board">
@@ -189,15 +161,11 @@ const GameBoard = ({ rooms, hallways, players, currentUserId, onRoomClick, curre
         )}
       </div>
 
-      {/* Render player tokens absolutely positioned over the grid */}
+      {/* Render player tokens absolutely positioned over the grid (Simplified) */}
       <div className="player-tokens-layer">
-        {Object.keys(playersByPosition).map(position => {
-            const playersInCell = playersByPosition[position];
-            const totalInCell = playersInCell.length;
-            return playersInCell.map((player, index) => 
-                renderPlayerToken(player, index, totalInCell)
-            );
-        })}
+        {/* {Object.keys(playersByPosition).map(position => { ... })} */}
+        {/* Render directly from players array */}
+        {players.map(player => renderPlayerToken(player))}
       </div>
 
       {/* Character Starting Positions */}
