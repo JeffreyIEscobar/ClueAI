@@ -118,7 +118,6 @@ const Game = () => {
     if (validDestinations.length > 0) {
       const randomDestination = validDestinations[Math.floor(Math.random() * validDestinations.length)];
       
-      // <<< ADD CONSOLE LOG FOR DEBUGGING >>>
       console.log(`AI Debug: ${aiPlayer.username} moving from ${currentPosition} to ${randomDestination}`);
 
       // Update the player position
@@ -129,26 +128,37 @@ const Game = () => {
         return player;
       });
       
+      // Update state first
       setGameState(prev => ({
         ...prev,
         players: updatedPlayers
       }));
-      
-      // Add to game log
+
+      // Find the updated player object (needed for passing to suggestion)
+      const movedPlayer = updatedPlayers.find(p => p.userId === aiPlayer.userId);
+
+      // Add move to game log
       const newEntry = {
         type: 'movement',
         player: aiPlayer.username,
         content: `moved to ${randomDestination}`,
         timestamp: new Date()
       };
-      
       setGameLog(prev => [newEntry, ...prev]);
 
-      // End the turn after moving
-      performAiEndTurnRef.current(aiPlayer);
+      // Check if moved into a room and maybe suggest
+      const isRoom = gameState.board.rooms.some(r => r.id === randomDestination);
+      if (isRoom && Math.random() < 0.5) { // 50% chance to suggest if in a room
+        console.log(`AI Debug: ${aiPlayer.username} is considering suggestion in ${randomDestination}`);
+        performAiSuggestionRef.current(movedPlayer); // Pass player with updated position
+      } else {
+        // Didn't suggest or moved to hallway, end turn
+        performAiEndTurnRef.current(aiPlayer);
+      }
 
     } else {
       // If no possible moves, end turn immediately
+       console.log(`AI Debug: ${aiPlayer.username} has no valid moves from ${currentPosition}. Ending turn.`);
       performAiEndTurnRef.current(aiPlayer);
     }
   };
@@ -338,29 +348,28 @@ const Game = () => {
     };
     setGameLog(prev => [thinkingEntry, ...prev]);
 
-    // Simulate thinking delay
     const thinkingTime = 8000; // Fixed 8 seconds delay
     setTimeout(() => {
-       // Decide action - Restore random logic
-       const actionRoll = Math.random();
-       const canSuggest = gameState.board.rooms.some(r => r.id === aiPlayer.position);
-       const canMove = gameState.board.hallways.some(h => h.from === aiPlayer.position || h.to === aiPlayer.position);
+       // AI must attempt to move first
+       const currentPosition = aiPlayer.position;
+       const possibleDestinations = [];
+       gameState.board.hallways.forEach(hallway => {
+         if (hallway.from === currentPosition) possibleDestinations.push(hallway.to);
+         else if (hallway.to === currentPosition) possibleDestinations.push(hallway.from);
+       });
+       if (currentPosition === 'study') possibleDestinations.push('kitchen');
+       else if (currentPosition === 'kitchen') possibleDestinations.push('study');
+       else if (currentPosition === 'lounge') possibleDestinations.push('conservatory');
+       else if (currentPosition === 'conservatory') possibleDestinations.push('lounge');
+       
+       const canMove = possibleDestinations.filter(dest => dest !== currentPosition).length > 0;
 
-       // Probabilities: Move (50%), Suggest (30% if possible), Accuse (10%), End (10% or if others fail)
-       if (actionRoll < 0.5 && canMove) { // Try Move
+       if (canMove) {
+         console.log(`AI Debug: ${aiPlayer.username} attempting to move.`);
          performAiMoveRef.current(aiPlayer);
-       } else if (actionRoll < 0.8 && canSuggest) { // Try Suggest (only if in room)
-         performAiSuggestionRef.current(aiPlayer);
-       } else if (actionRoll < 0.9) { // Try Accuse
-         performAiAccusationRef.current(aiPlayer);
-       } else { // End Turn (or if move/suggest wasn't possible)
-          // If suggest was attempted but failed (not in room), try move if possible
-          if (actionRoll >= 0.5 && actionRoll < 0.8 && !canSuggest && canMove) {
-              performAiMoveRef.current(aiPlayer);
-          } else {
-              // Otherwise, just end the turn
-              performAiEndTurnRef.current(aiPlayer);
-          }
+       } else {
+         console.log(`AI Debug: ${aiPlayer.username} cannot move, ending turn immediately.`);
+         performAiEndTurnRef.current(aiPlayer);
        }
 
     }, thinkingTime);
@@ -579,7 +588,9 @@ const Game = () => {
             currentTurn={gameState.currentTurn} 
             currentUserId={currentUser?.id}
           />
-          <GameLog log={gameLog} />
+          <div className="game-log-container">
+            <GameLog log={gameLog} />
+          </div>
         </aside>
 
         <main className="game-main">
