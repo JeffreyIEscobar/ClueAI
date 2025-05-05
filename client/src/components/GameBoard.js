@@ -75,8 +75,8 @@ const GameBoard = ({ rooms, hallways, players, currentUserId, onRoomClick, curre
     return colorMap[character] || '#888888';
   };
 
-  // Render player token (will be positioned absolutely)
-  const renderPlayerToken = (player) => {
+  // Render player token (will be positioned absolutely with offset for multiples)
+  const renderPlayerToken = (player, indexInCell, totalInCell) => {
     if (!player || !positionToCoords[player.position]) return null; // Don't render if position unknown
 
     const isCurrentPlayer = player.userId === currentUserId;
@@ -84,27 +84,56 @@ const GameBoard = ({ rooms, hallways, players, currentUserId, onRoomClick, curre
     const color = getCharacterColor(player.character);
     const textColor = ['#FFFFFF', '#E6C700'].includes(color) ? '#000000' : '#FFFFFF';
 
-    // Calculate absolute position style
+    // Calculate base absolute position style
     const coords = positionToCoords[player.position];
     const cellWidthPercent = 100 / 5;
     const cellHeightPercent = 100 / 5;
-    const left = `calc(${coords.col * cellWidthPercent}% + ${cellWidthPercent / 2}% - 11px)`; // Center: left edge + half cell - half token (adjust 11px)
-    const top = `calc(${coords.row * cellHeightPercent}% + ${cellHeightPercent / 2}% - 11px)`; // Center: top edge + half cell - half token (adjust 11px)
+    // Base position calculation (center of the cell)
+    const baseLeft = `calc(${coords.col * cellWidthPercent}% + ${cellWidthPercent / 2}% - 11px)`;
+    const baseTop = `calc(${coords.row * cellHeightPercent}% + ${cellHeightPercent / 2}% - 11px)`;
 
-    // <<< Log finding player >>>
-    console.log(`GameBoard Render: Rendering ${player.username} at calculated top: ${top}, left: ${left} (Position: ${player.position})`);
+    // Calculate offset based on index within the cell
+    let offsetLeft = 0;
+    let offsetTop = 0;
+    const offsetAmount = 5; // Pixels to offset
+
+    if (totalInCell > 1) {
+        // Simple offsetting: alternate left/right or use a small grid pattern
+        // Example: Alternate left/right
+        offsetLeft = (indexInCell % 2 === 0) ? -offsetAmount : offsetAmount;
+        // Example: Could also do vertical offset based on pairs
+        // offsetTop = Math.floor(indexInCell / 2) * offsetAmount;
+    }
+
+    // Apply offset using transform for potentially smoother animation
+    const finalTransform = `translate(calc(${baseLeft} + ${offsetLeft}px), calc(${baseTop} + ${offsetTop}px))`;
+
+    console.log(`GameBoard Render: Rendering ${player.username} at ${player.position} (Index: ${indexInCell}/${totalInCell}) -> Transform: ${finalTransform}`);
 
     return (
       <div
-        key={player.userId} // Add key here for mapped elements
+        key={player.userId} // Key for React list rendering
         className={`player-token ${isCurrentPlayer ? 'current-player' : ''} ${isPlayerTurn ? 'active-turn' : ''}`}
-        style={{ backgroundColor: color, color: textColor, position: 'absolute', top, left }}
+        // Apply transform instead of top/left directly
+        style={{ backgroundColor: color, color: textColor, position: 'absolute', transform: finalTransform }}
         title={player.character}
       >
         {getCharacterDisplay(player.character)}
       </div>
     );
   };
+
+  // Group players by their current position
+  const playersByPosition = players.reduce((acc, player) => {
+    const pos = player.position;
+    if (positionToCoords[pos]) { // Only include players with valid board positions
+        if (!acc[pos]) {
+            acc[pos] = [];
+        }
+        acc[pos].push(player);
+    }
+    return acc;
+  }, {});
 
   return (
     <div className="game-board">
@@ -155,28 +184,34 @@ const GameBoard = ({ rooms, hallways, players, currentUserId, onRoomClick, curre
 
       {/* Render player tokens absolutely positioned over the grid */}
       <div className="player-tokens-layer">
-        {players.map(player => renderPlayerToken(player))}
+        {Object.keys(playersByPosition).map(position => {
+            const playersInCell = playersByPosition[position];
+            const totalInCell = playersInCell.length;
+            return playersInCell.map((player, index) => 
+                renderPlayerToken(player, index, totalInCell)
+            );
+        })}
       </div>
 
       {/* Character Starting Positions */}
       <div className="starting-positions">
         <div className="start-position top-left" title="Professor Plum">
-          {getPlayerInPosition('start_plum') && renderPlayerToken(getPlayerInPosition('start_plum'))}
+          {/* {getPlayerInPosition('start_plum') && renderPlayerToken(getPlayerInPosition('start_plum'), 0, 1)} */}
         </div>
         <div className="start-position top-right" title="Miss Scarlet">
-          {getPlayerInPosition('start_scarlet') && renderPlayerToken(getPlayerInPosition('start_scarlet'))}
+          {/* {getPlayerInPosition('start_scarlet') && renderPlayerToken(getPlayerInPosition('start_scarlet'), 0, 1)} */}
         </div>
         <div className="start-position middle-left" title="Mrs. Peacock">
-          {getPlayerInPosition('start_peacock') && renderPlayerToken(getPlayerInPosition('start_peacock'))}
+          {/* {getPlayerInPosition('start_peacock') && renderPlayerToken(getPlayerInPosition('start_peacock'), 0, 1)} */}
         </div>
         <div className="start-position middle-right" title="Colonel Mustard">
-          {getPlayerInPosition('start_mustard') && renderPlayerToken(getPlayerInPosition('start_mustard'))}
+          {/* {getPlayerInPosition('start_mustard') && renderPlayerToken(getPlayerInPosition('start_mustard'), 0, 1)} */}
         </div>
         <div className="start-position bottom-left" title="Mr. Green">
-          {getPlayerInPosition('start_green') && renderPlayerToken(getPlayerInPosition('start_green'))}
+          {/* {getPlayerInPosition('start_green') && renderPlayerToken(getPlayerInPosition('start_green'), 0, 1)} */}
         </div>
         <div className="start-position bottom-right" title="Mrs. White">
-          {getPlayerInPosition('start_white') && renderPlayerToken(getPlayerInPosition('start_white'))}
+          {/* {getPlayerInPosition('start_white') && renderPlayerToken(getPlayerInPosition('start_white'), 0, 1)} */}
         </div>
       </div>
 

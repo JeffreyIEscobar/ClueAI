@@ -11,16 +11,16 @@ import '../styles/Game.css';
 // Mock data for direct game play
 const MOCK_USER = {
   id: 'user-1',
-  username: 'Player1'
+  username: 'Jeff'
 };
 
 const MOCK_GAME_STATE = {
   gameId: 'game-1',
   status: 'in_progress',
   players: [
-    { userId: 'user-1', username: 'Player1', character: 'Miss Scarlet', position: 'study', cards: ['Mrs. White', 'Kitchen', 'Revolver'], status: 'active', turnCount: 0 },
-    { userId: 'user-2', username: 'Player2', character: 'Professor Plum', position: 'hall', cards: [], status: 'active', turnCount: 0 },
-    { userId: 'user-3', username: 'Player3', character: 'Mrs. Peacock', position: 'lounge', cards: [], status: 'active', turnCount: 0 }
+    { userId: 'user-1', username: 'Jeff', character: 'Miss Scarlet', position: 'study', cards: ['Mrs. White', 'Kitchen', 'Revolver'], status: 'active', turnCount: 0 },
+    { userId: 'user-2', username: 'Hayden', character: 'Professor Plum', position: 'hall', cards: [], status: 'active', turnCount: 0 },
+    { userId: 'user-3', username: 'Nadiia', character: 'Mrs. Peacock', position: 'lounge', cards: [], status: 'active', turnCount: 0 }
   ],
   board: {
     rooms: [
@@ -302,16 +302,6 @@ const Game = () => {
               ...updatedPlayers[finishedPlayerIndex],
               turnCount: updatedPlayers[finishedPlayerIndex].turnCount + 1
           };
-
-          // <<< DIAGNOSTIC: Force Player 2 to Library (within the if block) >>>
-          if (aiPlayer.userId === 'user-2') {
-              console.log("DIAGNOSTIC: Forcing Player 2 position to 'library'");
-              // Make sure to update based on the already updated player object
-              updatedPlayers[finishedPlayerIndex] = {
-                  ...updatedPlayers[finishedPlayerIndex], // Keep the incremented turnCount
-                  position: 'library'
-              };
-          }
       } // End of if (finishedPlayerIndex !== -1)
 
       console.log("DIAGNOSTIC: Final updatedPlayers before setting state in endTurn:", updatedPlayers);
