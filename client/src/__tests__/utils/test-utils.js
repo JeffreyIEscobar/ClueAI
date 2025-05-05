@@ -1,7 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { AuthProvider } from '../../contexts/AuthContext';
 
 // Mock api module that AuthContext depends on
 jest.mock('../../utils/api', () => ({
@@ -34,9 +33,7 @@ jest.mock('react-router-dom', () => ({
 const AllTheProviders = ({ children }) => {
   return (
     <MemoryRouter>
-      <AuthProvider>
-        {children}
-      </AuthProvider>
+      {children}
     </MemoryRouter>
   );
 };
