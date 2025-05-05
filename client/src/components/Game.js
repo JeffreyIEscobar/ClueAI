@@ -308,11 +308,11 @@ const Game = () => {
         };
         setGameLog(prev => [thinkingEntry, ...prev]);
         
-        // Wait a bit to simulate thinking
+        // Wait a bit to simulate thinking (3 seconds)
         const timeout = setTimeout(() => {
           performAiTurnRef.current(aiPlayer);
           setAiTurnActive(false);
-        }, 2000);
+        }, 3000); // Changed timeout to 3 seconds
         
         return () => clearTimeout(timeout);
       }
@@ -369,7 +369,7 @@ const Game = () => {
       players: updatedPlayers
     }));
     
-    // Add to game log
+    // Add to game log using functional update
     const newEntry = {
       type: 'movement',
       player: currentUser.username,
@@ -377,7 +377,8 @@ const Game = () => {
       timestamp: new Date()
     };
     
-    setGameLog([newEntry, ...gameLog]);
+    setGameLog(prev => [newEntry, ...prev]); // Use functional update
+    // Player turn doesn't end automatically after move in Clue
   };
 
   const handleSuggest = (suggestion) => {
@@ -396,7 +397,7 @@ const Game = () => {
       suggestions: [...(prev.suggestions || []), newSuggestion]
     }));
     
-    // Update game log
+    // Update game log using functional update
     const newEntry = {
       type: 'suggestion',
       player: currentUser.username,
@@ -404,8 +405,9 @@ const Game = () => {
       timestamp: new Date()
     };
     
-    setGameLog([newEntry, ...gameLog]);
+    setGameLog(prev => [newEntry, ...prev]); // Use functional update
     setShowSuggestionModal(false);
+    // Player turn doesn't end automatically after suggestion
   };
 
   const handleAccuse = (accusation) => {
@@ -431,7 +433,7 @@ const Game = () => {
       accusations: [...(prev.accusations || []), newAccusation]
     }));
     
-    // Update game log
+    // Update game log using functional update
     const newEntry = {
       type: 'accusation',
       player: currentUser.username,
@@ -439,7 +441,7 @@ const Game = () => {
       timestamp: new Date()
     };
     
-    setGameLog([newEntry, ...gameLog]);
+    setGameLog(prev => [newEntry, ...prev]); // Use functional update
     
     if (correct) {
       setTimeout(() => {
@@ -453,8 +455,10 @@ const Game = () => {
       }, 500);
     }
     setShowAccusationModal(false);
-    // Should the turn end after an accusation? Typically yes.
-    // handleEndTurn(); // Consider adding this if not already handled
+    // An incorrect accusation usually ends the player's ability to play,
+    // but doesn't necessarily end their *current* turn immediately.
+    // A correct accusation ends the game.
+    // Let's explicitly NOT end the turn here, the player must click End Turn.
   };
 
   const handleEndTurn = () => {
@@ -471,7 +475,7 @@ const Game = () => {
       currentTurn: nextPlayerId
     }));
     
-    // Add to game log
+    // Add to game log using functional update
     const newEntry = {
       type: 'turn',
       player: currentUser.username,
@@ -479,7 +483,7 @@ const Game = () => {
       timestamp: new Date()
     };
     
-    setGameLog([newEntry, ...gameLog]);
+    setGameLog(prev => [newEntry, ...prev]); // Use functional update
   };
 
   if (error) {
