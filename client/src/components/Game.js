@@ -58,7 +58,12 @@ const MOCK_GAME_STATE = {
   },
   suggestions: [],
   accusations: [],
-  pendingSuggestion: null
+  pendingSuggestion: null,
+  solution: {
+    character: 'Mr. Green',
+    weapon: 'Rope',
+    room: 'Library'
+  }
 };
 
 const Game = () => {
@@ -192,7 +197,11 @@ const Game = () => {
     const randomWeapon = weapons[Math.floor(Math.random() * weapons.length)];
     const randomRoom = rooms[Math.floor(Math.random() * rooms.length)];
     
-    const correct = Math.random() > 0.8; // 20% chance of being correct
+    // Check accusation against the mock solution
+    const correct = 
+      randomCharacter === gameState.solution.character &&
+      randomWeapon === gameState.solution.weapon &&
+      randomRoom === gameState.solution.room;
     
     const newAccusation = {
       accusingPlayer: aiPlayer.userId,
@@ -222,10 +231,10 @@ const Game = () => {
       setTimeout(() => {
         alert(`${aiPlayer.username}'s accusation was correct! They win the game!`);
       }, 500);
+      // Potentially update game status to 'finished'
     } else {
-      setTimeout(() => {
-        alert(`${aiPlayer.username}'s accusation was incorrect! They lost the game!`);
-      }, 500);
+      // Incorrect accusation doesn't end the game in this mock
+      // but you might disable the player or show a message
     }
     
     performAiEndTurnRef.current(aiPlayer);
@@ -400,10 +409,14 @@ const Game = () => {
   };
 
   const handleAccuse = (accusation) => {
-    // Local mock implementation
     console.log('Making accusation:', accusation);
-    const correct = Math.random() > 0.5; // randomly determine if correct
     
+    // Check accusation against the mock solution
+    const correct = 
+      accusation.character === gameState.solution.character &&
+      accusation.weapon === gameState.solution.weapon &&
+      accusation.room === gameState.solution.room;
+      
     const newAccusation = {
       accusingPlayer: currentUser.id,
       character: accusation.character,
@@ -432,12 +445,16 @@ const Game = () => {
       setTimeout(() => {
         alert('Your accusation was correct! You win the game!');
       }, 500);
+      // Potentially update game status to 'finished'
     } else {
       setTimeout(() => {
-        alert('Your accusation was incorrect! You lost the game!');
+        alert('Your accusation was incorrect!');
+        // In a real game, the player might be disqualified or lose their turn
       }, 500);
     }
     setShowAccusationModal(false);
+    // Should the turn end after an accusation? Typically yes.
+    // handleEndTurn(); // Consider adding this if not already handled
   };
 
   const handleEndTurn = () => {
