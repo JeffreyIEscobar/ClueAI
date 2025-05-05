@@ -118,8 +118,8 @@ const Game = () => {
     if (validDestinations.length > 0) {
       const randomDestination = validDestinations[Math.floor(Math.random() * validDestinations.length)];
       
-      // <<< ADD CONSOLE LOG FOR DEBUGGING >>>
-      console.log(`AI Debug: ${aiPlayer.username} attempting move from ${currentPosition} to ${randomDestination}`);
+      // console.log(`AI Action: ${aiPlayer.username} attempting move from ${currentPosition} to ${randomDestination}`);
+      console.log(`Connected User: ${aiPlayer.username} attempting move from ${currentPosition} to ${randomDestination}`);
 
       // Update the player position
       setGameState(prevState => {
@@ -133,7 +133,8 @@ const Game = () => {
               ...prevState,
               players: updatedPlayers
           };
-          console.log(`AI Debug: ${aiPlayer.username} state AFTER move update:`, newState.players.find(p => p.userId === aiPlayer.userId));
+          // console.log(`AI Action: ${aiPlayer.username} state AFTER move update:`, newState.players.find(p => p.userId === aiPlayer.userId));
+          console.log(`Connected User: ${aiPlayer.username} state AFTER move update:`, newState.players.find(p => p.userId === aiPlayer.userId));
           return newState;
       });
       
@@ -324,11 +325,12 @@ const Game = () => {
     if (aiTurnActive) return; // Prevent overlapping calls
 
     const aiPlayer = gameState.players.find(p => p.userId === gameState.currentTurn);
-    // <<< ADD CONSOLE LOG FOR AI TURN START >>>
-    console.log(`AI Debug: performAiTurn triggered for ${aiPlayer?.username} (ID: ${aiPlayer?.userId})`);
+    // console.log(`AI Action: performAiTurn triggered for ${aiPlayer?.username} (ID: ${aiPlayer?.userId})`);
+    console.log(`Connected User: performAiTurn triggered for ${aiPlayer?.username} (ID: ${aiPlayer?.userId})`);
 
     if (!aiPlayer || aiPlayer.userId === currentUser.id) {
-      console.log(`AI Debug: performAiTurn exiting - not AI turn or player not found.`);
+      // console.log(`AI Action: performAiTurn exiting - not AI turn or player not found.`);
+      console.log(`Connected User: performAiTurn exiting - not AI turn or player not found.`);
       setAiTurnActive(false); // Should not happen, but safety check
       return;
     }
@@ -377,16 +379,20 @@ const Game = () => {
        const accuseRoll = Math.random(); // Roll for accusation chance
 
        if (canMove) {
-         console.log(`AI Debug: ${aiPlayer.username} decided to MOVE.`);
+         // console.log(`AI Action: ${aiPlayer.username} decided to MOVE.`);
+         console.log(`Connected User: ${aiPlayer.username} decided to MOVE.`);
          performAiMoveRef.current(aiPlayer);
        } else if (canSuggest) {
-         console.log(`AI Debug: ${aiPlayer.username} decided to SUGGEST.`);
+         // console.log(`AI Action: ${aiPlayer.username} decided to SUGGEST.`);
+         console.log(`Connected User: ${aiPlayer.username} decided to SUGGEST.`);
          performAiSuggestionRef.current(aiPlayer);
        } else if (aiPlayer.turnCount > 0 && accuseRoll < 0.2) { // 20% chance to accuse after turn 1
-         console.log(`AI Debug: ${aiPlayer.username} decided to ACCUSE.`);
+         // console.log(`AI Action: ${aiPlayer.username} decided to ACCUSE.`);
+         console.log(`Connected User: ${aiPlayer.username} decided to ACCUSE.`);
          performAiAccusationRef.current(aiPlayer);
        } else {
-         console.log(`AI Debug: ${aiPlayer.username} decided to END TURN (no other actions possible/chosen).`);
+         // console.log(`AI Action: ${aiPlayer.username} decided to END TURN (no other actions possible/chosen).`);
+         console.log(`Connected User: ${aiPlayer.username} decided to END TURN (no other actions possible/chosen).`);
          // Cannot move, cannot suggest, and not accusing - End Turn
          performAiEndTurnRef.current(aiPlayer);
        }
