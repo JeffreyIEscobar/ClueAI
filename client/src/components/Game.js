@@ -18,9 +18,9 @@ const MOCK_GAME_STATE = {
   gameId: 'game-1',
   status: 'in_progress',
   players: [
-    { userId: 'user-1', username: 'Player1', character: 'Miss Scarlet', position: 'study', cards: ['Mrs. White', 'Kitchen', 'Revolver'] },
-    { userId: 'user-2', username: 'Player2', character: 'Professor Plum', position: 'hall', cards: [] },
-    { userId: 'user-3', username: 'Player3', character: 'Mrs. Peacock', position: 'lounge', cards: [] }
+    { userId: 'user-1', username: 'Player1', character: 'Miss Scarlet', position: 'study', cards: ['Mrs. White', 'Kitchen', 'Revolver'], status: 'active' },
+    { userId: 'user-2', username: 'Player2', character: 'Professor Plum', position: 'hall', cards: [], status: 'active' },
+    { userId: 'user-3', username: 'Player3', character: 'Mrs. Peacock', position: 'lounge', cards: [], status: 'active' }
   ],
   board: {
     rooms: [
@@ -240,12 +240,18 @@ const Game = () => {
       }, 500);
       // Potentially update game status to 'finished'
     } else {
-      // Incorrect accusation doesn't end the game in this mock
-      // but you might disable the player or show a message
+      // Incorrect accusation: Player is out
+      setGameState(prev => {
+        const updatedPlayers = prev.players.map(p =>
+          p.userId === aiPlayer.userId ? { ...p, status: 'inactive' } : p
+        );
+        return { ...prev, players: updatedPlayers };
+      });
+
       setGameLog(prev => [{
         type: 'info',
         player: aiPlayer.username,
-        content: `made an incorrect accusation.`,
+        content: `made an incorrect accusation and is out of the game!`,
         timestamp: new Date()
       }, ...prev]);
     }
@@ -264,11 +270,23 @@ const Game = () => {
     };
     setGameLog(prev => [endTurnEntry, ...prev]);
 
-    // Cycle to next player after a short delay for UI update
+    // Cycle to next ACTIVE player after a short delay for UI update
     setTimeout(() => {
       const playerIds = gameState.players.map(p => p.userId);
-      const currentIndex = playerIds.indexOf(aiPlayer.userId); // Use aiPlayer.userId passed in
-      const nextIndex = (currentIndex + 1) % playerIds.length;
+      const currentIndex = playerIds.indexOf(aiPlayer.userId);
+      let nextIndex = (currentIndex + 1) % playerIds.length;
+      let nextPlayer = gameState.players[nextIndex];
+
+      // Find the next active player
+      while (nextPlayer.status === 'inactive') {
+          if (nextIndex === currentIndex) { // All players inactive? Should not happen in normal play
+              console.error("Error: Could not find next active player.");
+              setGameState(prev => ({ ...prev, status: 'finished' })); // End game?
+              return;
+          }
+          nextIndex = (nextIndex + 1) % playerIds.length;
+          nextPlayer = gameState.players[nextIndex];
+      }
       const nextPlayerId = playerIds[nextIndex];
 
       setGameState(prev => ({
@@ -297,6 +315,18 @@ const Game = () => {
       return;
     }
 
+    // Check if player is inactive
+    if (aiPlayer.status === 'inactive') {
+        setGameLog(prev => [{
+            type: 'info',
+            player: aiPlayer.username,
+            content: `is out of the game, skipping turn.`,
+            timestamp: new Date()
+        }, ...prev]);
+        performAiEndTurnRef.current(aiPlayer); // Skip turn
+        return;
+    }
+
     setAiTurnActive(true);
     setThinking(true); // Show thinking state
 
@@ -311,31 +341,33 @@ const Game = () => {
     // Simulate thinking delay
     const thinkingTime = 8000; // Fixed 8 seconds delay
     setTimeout(() => {
-       // Decide action
-       // --- REMOVE RANDOM ACTION LOGIC ---
-       // const actionRoll = Math.random();
-       // const canSuggest = gameState.board.rooms.some(r => r.id === aiPlayer.position);
-       //
-       // if (actionRoll < 0.6) { // Try Move
-       //   performAiMoveRef.current(aiPlayer);
-       // } else if (actionRoll < 0.8 && canSuggest) { // Try Suggest (only if in room)
-       //   performAiSuggestionRef.current(aiPlayer);
-       // } else if (actionRoll < 0.9) { // Try Accuse
-       //   performAiAccusationRef.current(aiPlayer);
-       // } else { // End Turn immediately
-       //   performAiEndTurnRef.current(aiPlayer);
-       // }
+       // Decide action - Restore random logic
+       const actionRoll = Math.random();
+       const canSuggest = gameState.board.rooms.some(r => r.id === aiPlayer.position);
+       const canMove = gameState.board.hallways.some(h => h.from === aiPlayer.position || h.to === aiPlayer.position);
 
-       // --- ALWAYS TRY TO MOVE --- 
-       // The performAiMoveRef function will handle ending the turn if no move is possible.
-       performAiMoveRef.current(aiPlayer);
+       // Probabilities: Move (50%), Suggest (30% if possible), Accuse (10%), End (10% or if others fail)
+       if (actionRoll < 0.5 && canMove) { // Try Move
+         performAiMoveRef.current(aiPlayer);
+       } else if (actionRoll < 0.8 && canSuggest) { // Try Suggest (only if in room)
+         performAiSuggestionRef.current(aiPlayer);
+       } else if (actionRoll < 0.9) { // Try Accuse
+         performAiAccusationRef.current(aiPlayer);
+       } else { // End Turn (or if move/suggest wasn't possible)
+          // If suggest was attempted but failed (not in room), try move if possible
+          if (actionRoll >= 0.5 && actionRoll < 0.8 && !canSuggest && canMove) {
+              performAiMoveRef.current(aiPlayer);
+          } else {
+              // Otherwise, just end the turn
+              performAiEndTurnRef.current(aiPlayer);
+          }
+       }
 
     }, thinkingTime);
 
   // Rerun when currentTurn changes, but only if it's an AI's turn
-  // }, [aiTurnActive, currentUser.id, gameState.currentTurn, gameState.players, gameState.board.rooms]);
-  // Simplified dependencies as board.rooms is not directly used here anymore for decision
-  }, [aiTurnActive, currentUser.id, gameState.currentTurn, gameState.players]);
+  // Dependencies updated to include board info needed for decisions
+  }, [aiTurnActive, currentUser.id, gameState]); // Use gameState dependency
 
 
   // Effect to trigger AI turn
