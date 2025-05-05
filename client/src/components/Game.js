@@ -357,7 +357,7 @@ const Game = () => {
     // Simulate thinking delay
     const thinkingTime = 8000; // Fixed 8 seconds delay
     setTimeout(() => {
-       // Decide action - Prioritize Move > Suggest > Accuse (after turn 1)
+       // Decide action - Prioritize Move > Suggest (after turn 1) > Accuse (after turn 2)
        const currentPosition = aiPlayer.position;
        const possibleDestinations = [];
        gameState.board.hallways.forEach(hallway => {
@@ -375,21 +375,17 @@ const Game = () => {
        const accuseRoll = Math.random(); // Roll for accusation chance
 
        if (canMove) {
-         // console.log(`AI Action: ${aiPlayer.username} decided to MOVE.`);
          console.log(`Connected User: ${aiPlayer.username} decided to MOVE.`);
          performAiMoveRef.current(aiPlayer);
-       } else if (canSuggest) {
-         // console.log(`AI Action: ${aiPlayer.username} decided to SUGGEST.`);
-         console.log(`Connected User: ${aiPlayer.username} decided to SUGGEST.`);
+       } else if (canSuggest && aiPlayer.turnCount > 0) { // <<< Suggest only AFTER turn 1 >>>
+         console.log(`Connected User: ${aiPlayer.username} decided to SUGGEST (Turn: ${aiPlayer.turnCount + 1}).`);
          performAiSuggestionRef.current(aiPlayer);
-       } else if (aiPlayer.turnCount > 0 && accuseRoll < 0.2) { // 20% chance to accuse after turn 1
-         // console.log(`AI Action: ${aiPlayer.username} decided to ACCUSE.`);
-         console.log(`Connected User: ${aiPlayer.username} decided to ACCUSE.`);
+       } else if (aiPlayer.turnCount > 1 && accuseRoll < 0.2) { // <<< Accuse only AFTER turn 2 (20% chance) >>>
+         console.log(`Connected User: ${aiPlayer.username} decided to ACCUSE (Turn: ${aiPlayer.turnCount + 1}).`);
          performAiAccusationRef.current(aiPlayer);
        } else {
-         // console.log(`AI Action: ${aiPlayer.username} decided to END TURN (no other actions possible/chosen).`);
-         console.log(`Connected User: ${aiPlayer.username} decided to END TURN (no other actions possible/chosen).`);
-         // Cannot move, cannot suggest, and not accusing - End Turn
+         console.log(`Connected User: ${aiPlayer.username} decided to END TURN (No move; Suggest possible: ${canSuggest}, Accuse possible: ${aiPlayer.turnCount > 1}).`);
+         // Cannot move, cannot suggest (or too early), and not accusing (or too early / failed roll) - End Turn
          performAiEndTurnRef.current(aiPlayer);
        }
 
