@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import GameBoard from './GameBoard';
 import PlayerInfo from './PlayerInfo';
 import GameActions from './GameActions';
