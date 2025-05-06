@@ -357,7 +357,7 @@ const Game = () => {
     // Simulate thinking delay
     const thinkingTime = 8000; // Fixed 8 seconds delay
     setTimeout(() => {
-       // Decide action - Prioritize Move > Suggest (after turn 1) > Accuse (after turn 2)
+       // Decide action based on turn number first, then move priority
        const currentPosition = aiPlayer.position;
        const possibleDestinations = [];
        gameState.board.hallways.forEach(hallway => {
@@ -373,25 +373,26 @@ const Game = () => {
        const canMove = validDestinations.length > 0;
        const canSuggest = gameState.board.rooms.some(r => r.id === aiPlayer.position);
        const accuseRoll = Math.random(); // Roll for accusation chance
-       const suggestAllowed = canSuggest && aiPlayer.turnCount > 0;
-       const accuseAllowed = aiPlayer.turnCount > 1 && accuseRoll < 0.2;
+       const currentTurnNumber = aiPlayer.turnCount + 1;
 
        // Log conditions before decision
-       console.log(`Connected User: ${aiPlayer.username} Turn ${aiPlayer.turnCount + 1} - Checking actions: Can Move=${canMove}, Suggest Allowed=${suggestAllowed}, Accuse Allowed=${accuseAllowed}`);
+       console.log(`Connected User: ${aiPlayer.username} Turn ${currentTurnNumber} - Checking actions: Can Move=${canMove}, Can Suggest=${canSuggest}, Turn Count=${aiPlayer.turnCount}`);
 
-       // --- Decision Logic --- 
-       if (canMove) {
-         console.log(`Connected User: ${aiPlayer.username} decided to MOVE.`);
-         performAiMoveRef.current(aiPlayer);
-       } else if (suggestAllowed) { // If cannot move, try suggesting (if allowed)
-         console.log(`Connected User: ${aiPlayer.username} decided to SUGGEST (Turn: ${aiPlayer.turnCount + 1}).`);
+       // --- Decision Logic based on Turn Number --- 
+       if (aiPlayer.turnCount === 1 && canSuggest) {
+         // Force Suggestion on Turn 2 if possible
+         console.log(`Connected User: ${aiPlayer.username} decided to SUGGEST (Forced on Turn 2).`);
          performAiSuggestionRef.current(aiPlayer);
-       } else if (accuseAllowed) { // If cannot move/suggest, try accusing (if allowed)
-         console.log(`Connected User: ${aiPlayer.username} decided to ACCUSE (Turn: ${aiPlayer.turnCount + 1}).`);
+       } else if (aiPlayer.turnCount === 2 && accuseRoll < 0.8) { // Force Accusation on Turn 3 (80% chance)
+         console.log(`Connected User: ${aiPlayer.username} decided to ACCUSE (Forced attempt on Turn 3).`);
          performAiAccusationRef.current(aiPlayer);
+       } else if (canMove) {
+         // Default to Move if not special turn or special action failed/not possible
+         console.log(`Connected User: ${aiPlayer.username} decided to MOVE (Default action).`);
+         performAiMoveRef.current(aiPlayer);
        } else {
-         // If none of the above, end turn
-         console.log(`Connected User: ${aiPlayer.username} decided to END TURN (Cannot Move; Suggest Allowed=${suggestAllowed}; Accuse Allowed=${accuseAllowed}).`);
+         // Cannot move, and not suggesting/accusing based on turn logic
+         console.log(`Connected User: ${aiPlayer.username} decided to END TURN (Cannot Move, and not suggesting/accusing this turn).`);
          performAiEndTurnRef.current(aiPlayer);
        }
 
